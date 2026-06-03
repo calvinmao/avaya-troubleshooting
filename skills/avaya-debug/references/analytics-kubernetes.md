@@ -225,3 +225,188 @@ ls /home/cust/custom/mysql/                  # Bundled driver location
 # /var/vcap/store full -> move director/tasks aside
 df -h /var/vcap/store
 ```
+
+
+---
+
+## Prometheus Alert Rules — Kubernetes / kube-state-metrics
+
+> Source: [samber/awesome-prometheus-alerts](https://github.com/samber/awesome-prometheus-alerts) (MIT License)
+> Apply to Avaya Analytics (Oceanalytics on bosh/CFCR/K8s) deployments.
+
+### Node Health
+
+```yaml
+# KubernetesNodeNotReady — node not in Ready state
+- alert: KubernetesNodeNotReady
+  expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+  for: 10m
+  labels: { severity: critical }
+  annotations:
+    summary: "K8s node {{ $labels.node }} is not Ready for 10 min"
+
+# KubernetesNodeMemoryPressure / DiskPressure
+- alert: KubernetesNodeMemoryPressure
+  expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "Node {{ $labels.node }} under memory pressure — pods may be evicted"
+
+- alert: KubernetesNodeDiskPressure
+  expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "Node {{ $labels.node }} under disk pressure — check /var/vcap/store"
+```
+
+### Pod & Container Health
+
+```yaml
+# KubernetesPodCrashLooping — >3 restarts in 1 minute
+- alert: KubernetesPodCrashLooping
+  expr: increase(kube_pod_container_status_restarts_total[1m]) > 3
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash-looping"
+
+# KubernetesPodNotHealthy — pod stuck in non-Running phase
+- alert: KubernetesPodNotHealthy
+  expr: |
+    min_over_time(
+      sum by(namespace, pod)(
+        kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}
+      )[15m:1m]
+    ) > 0
+  labels: { severity: critical }
+  annotations:
+    summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} not healthy for 15 min"
+
+# KubernetesContainerOomKiller — container OOM killed
+- alert: KubernetesContainerOomKiller
+  expr: |
+    (kube_pod_container_status_restarts_total - kube_pod_container_status_restarts_total offset 10m >= 1)
+    and ignoring(reason) min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[10m]) >= 1
+  for: 0m
+  labels: { severity: warning }
+  annotations:
+    summary: "Container {{ $labels.container }} was OOM-killed — increase memory limit"
+
+# KubernetesJobFailed — batch job failed
+- alert: KubernetesJobFailed
+  expr: kube_job_status_failed > 0
+  for: 0m
+  labels: { severity: warning }
+  annotations:
+    summary: "K8s job {{ $labels.namespace }}/{{ $labels.job_name }} has failed"
+```
+
+### Persistent Volume Health
+
+```yaml
+# KubernetesPersistentvolumeclaimPending
+- alert: KubernetesPersistentvolumeclaimPending
+  expr: kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} stuck Pending"
+
+# KubernetesVolumeOutOfDiskSpace — PV < 10% free
+- alert: KubernetesVolumeOutOfDiskSpace
+  expr: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes * 100 < 10
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "PV on {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} < 10% free"
+
+# KubernetesVolumeFullInFourDays — linear fill projection
+- alert: KubernetesVolumeFullInFourDays
+  expr: |
+    predict_linear(kubelet_volume_stats_available_bytes[6h:5m], 4 * 24 * 3600) < 0
+  for: 0m
+  labels: { severity: critical }
+  annotations:
+    summary: "PV {{ $labels.persistentvolumeclaim }} projected full in < 4 days"
+
+# KubernetesPersistentvolumeError — PV in Failed/Pending state
+- alert: KubernetesPersistentvolumeError
+  expr: kube_persistentvolume_status_phase{phase=~"Failed|Pending"} > 0
+  for: 0m
+  labels: { severity: critical }
+  annotations:
+    summary: "PV {{ $labels.persistentvolume }} is in error state"
+```
+
+### Deployment & ReplicaSet
+
+```yaml
+# KubernetesDeploymentReplicasMismatch — desired != available
+- alert: KubernetesDeploymentReplicasMismatch
+  expr: |
+    kube_deployment_spec_replicas
+    != kube_deployment_status_replicas_available
+  for: 10m
+  labels: { severity: warning }
+  annotations:
+    summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} replica mismatch"
+
+# KubernetesStatefulsetReplicasMismatch
+- alert: KubernetesStatefulsetReplicasMismatch
+  expr: |
+    kube_statefulset_status_replicas_ready
+    != kube_statefulset_status_replicas
+  for: 10m
+  labels: { severity: warning }
+  annotations:
+    summary: "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} replica mismatch"
+
+# KubernetesHpaScalingAbility — HPA maxed out (cannot scale further)
+- alert: KubernetesHpaMaxedOut
+  expr: |
+    kube_horizontalpodautoscaler_status_current_replicas
+    == kube_horizontalpodautoscaler_spec_max_replicas
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }} at max replicas"
+```
+
+### API Server
+
+```yaml
+# KubernetesApiServerErrors — 5xx error rate > 3%
+- alert: KubernetesApiServerErrors
+  expr: |
+    sum(rate(apiserver_request_total{job="apiserver",code=~"5.."}[1m]))
+    / sum(rate(apiserver_request_total{job="apiserver"}[1m])) * 100 > 3
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "API server 5xx rate > 3% — bosh director and kubectl degraded"
+
+# KubernetesApiClientErrors — client-side 5xx to API server
+- alert: KubernetesApiClientErrors
+  expr: |
+    (sum(rate(rest_client_requests_total{code=~"5.."}[1m])) by (instance, job)
+    / sum(rate(rest_client_requests_total[1m])) by (instance, job)) * 100 > 1
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "Kubernetes API client reporting > 1% 5xx errors"
+```
+
+### Alert-to-Action Table (Avaya Analytics)
+
+| Alert | Analytics Impact | First Action |
+|-------|----------------|--------------|
+| KubernetesNodeNotReady | Pod scheduling blocked; pipeline stalls | `kubectl describe node <node>`; check bosh vm status |
+| KubernetesPodCrashLooping | Kafka, MicroStrategy, or REF pod cycling | `kubectl logs <pod> --previous`; look for OOM or DB conn error |
+| KubernetesContainerOomKiller | Container memory limit too low | `kubectl top pod`; increase resource.limits.memory |
+| KubernetesVolumeOutOfDiskSpace | `/var/vcap/store` pressure; pipeline write failures | `kubectl exec` into pod; `du -sh *`; rotate old data |
+| KubernetesVolumeFullInFourDays | Pre-emptive warning for archive/Kafka volumes | Request customer storage expansion before outage |
+| KubernetesApiServerErrors | bosh director commands fail; `ccm` unresponsive | Check etcd health; restart API server pod if needed |
+| KubernetesDeploymentReplicasMismatch | Redundant pods missing — single point of failure | `kubectl rollout status`; describe failed pods |
+| KubernetesHpaMaxedOut | Load exceeds capacity; consider increasing max replicas | Review CPU/memory limits; right-size pod resources |

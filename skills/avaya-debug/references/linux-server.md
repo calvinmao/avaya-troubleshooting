@@ -353,3 +353,170 @@ cat /proc/interrupts | grep -E "CPU|eth|ens|eno|bond"
 numactl --hardware
 # Java services should be pinned to a single NUMA node to avoid cross-socket latency
 ```
+
+
+---
+
+## Prometheus Alert Rules — Node Exporter (Linux Servers)
+
+> Source: [samber/awesome-prometheus-alerts](https://github.com/samber/awesome-prometheus-alerts) (MIT License)
+> Apply to all Avaya Linux servers (AES, SM, AACC, ACRA, EPM, CCMM) running `node_exporter`.
+
+### Memory & Swap
+
+```yaml
+# HostOutOfMemory — available RAM < 10%
+- alert: HostOutOfMemory
+  expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "Host out of memory (< 10% left)"
+
+# HostSwapIsFillingUp — swap > 80% used
+- alert: HostSwapIsFillingUp
+  expr: (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "Swap space filling up (> 80%)"
+
+# HostOomKillDetected — OOM killer fired in last 30 min
+- alert: HostOomKillDetected
+  expr: increase(node_vmstat_oom_kill[30m]) > 0
+  labels: { severity: critical }
+  annotations:
+    summary: "OOM kill detected — Java heap or DB buffer likely cause"
+```
+
+### CPU & I/O
+
+```yaml
+# HostHighCpuLoad — sustained CPU > 80%
+- alert: HostHighCpuLoad
+  expr: 1 - (avg without(cpu)(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.80
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "CPU load > 80% for 5 minutes"
+
+# HostCpuStealNoisyNeighbor — steal time > 10% (hypervisor contention)
+- alert: HostCpuStealNoisyNeighbor
+  expr: avg by(instance)(rate(node_cpu_seconds_total{mode="steal"}[5m])) * 100 > 10
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "CPU steal > 10% — hypervisor overloaded or noisy neighbor VM"
+
+# HostCpuHighIowait — I/O wait > 10% (storage bottleneck)
+- alert: HostCpuHighIowait
+  expr: avg by(instance)(rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100 > 10
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "I/O wait > 10% — disk or NFS may be bottleneck"
+```
+
+### Disk & Filesystem
+
+```yaml
+# HostOutOfDiskSpace — < 10% free on non-tmpfs
+- alert: HostOutOfDiskSpace
+  expr: |
+    node_filesystem_avail_bytes{fstype!~"^(fuse.*|tmpfs|cifs|nfs)"}
+    / node_filesystem_size_bytes < 0.10
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "Disk < 10% free on {{ $labels.mountpoint }}"
+
+# HostDiskMayFillIn24Hours — linear projection fills disk in < 24h
+- alert: HostDiskMayFillIn24Hours
+  expr: |
+    predict_linear(node_filesystem_avail_bytes{fstype!~"^(fuse.*|tmpfs|cifs|nfs)"}[3h], 86400) <= 0
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "Disk {{ $labels.mountpoint }} projected to fill within 24 hours"
+
+# HostOutOfInodes — < 10% inodes free
+- alert: HostOutOfInodes
+  expr: |
+    node_filesystem_files_free{fstype!~"^(fuse.*|tmpfs|cifs|nfs)"}
+    / node_filesystem_files < 0.10
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "Inode exhaustion < 10% free — log spam or small-file accumulation"
+```
+
+### Network
+
+```yaml
+# HostNetworkReceiveErrors — persistent RX errors
+- alert: HostNetworkReceiveErrors
+  expr: rate(node_network_receive_errs_total[2m]) / rate(node_network_receive_packets_total[2m]) > 0.01
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "NIC receive errors > 1% — check cable or switch port"
+
+# HostNetworkBondDegraded — bond member down
+- alert: HostNetworkBondDegraded
+  expr: (node_bonding_active{master!=""}) < node_bonding_slaves{master!=""}
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "Bond {{ $labels.master }} is degraded — a member NIC is down"
+
+# HostConntrackLimit — conntrack table > 80% full
+- alert: HostConntrackLimit
+  expr: node_nf_conntrack_entries / node_nf_conntrack_entries_limit > 0.80
+  for: 5m
+  labels: { severity: critical }
+  annotations:
+    summary: "Conntrack table > 80% — SIP NAT/ALG or high call volume at risk"
+```
+
+### System Services & Time
+
+```yaml
+# HostSystemdServiceCrashed — any unit in failed state
+- alert: HostSystemdServiceCrashed
+  expr: node_systemd_unit_state{state="failed"} == 1
+  for: 0m
+  labels: { severity: warning }
+  annotations:
+    summary: "systemd unit {{ $labels.name }} is in failed state"
+
+# HostClockSkew — NTP drift > 50 ms (affects SIP and CDR timestamps)
+- alert: HostClockSkew
+  expr: abs(node_timex_offset_seconds) > 0.05
+  for: 10m
+  labels: { severity: warning }
+  annotations:
+    summary: "Clock skew > 50 ms — check NTP; affects SIP timers and CDR correlation"
+
+# HostClockNotSynchronising — NTP sync lost
+- alert: HostClockNotSynchronising
+  expr: min_over_time(node_timex_sync_status[1m]) == 0
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "NTP sync lost — certificate validity and SIP call setup may fail"
+```
+
+### Alert Routing for Avaya Servers
+
+| Alert | Avaya Impact | First Action |
+|-------|-------------|--------------|
+| HostOutOfMemory | AES/JTAPI connection drops; WFO insert failures | `free -h`; check Java heap (`jstat -gcutil`) |
+| HostOomKillDetected | Service crash without clean shutdown log | `dmesg | grep -i oom`; identify victim process |
+| HostHighCpuLoad | SIP processing delays; JTAPI event queue backup | `top -H`; identify thread consuming CPU |
+| HostOutOfDiskSpace | Log loss; PostgreSQL write failures; recording gaps | `du -sh /var/log/*`; rotate logs immediately |
+| HostDiskMayFillIn24Hours | Pre-emptive — correlates with heavy recording or logging | Schedule log rotation; alert customer |
+| HostOutOfInodes | Identical symptom to disk full but `df -h` shows space | `df -i`; find directory with millions of small files |
+| HostNetworkBondDegraded | Potential single-point of failure for voice traffic | `cat /proc/net/bonding/bond0`; notify network team |
+| HostConntrackLimit | SIP calls fail with no SBC-side error | `sysctl net.netfilter.nf_conntrack_max`; increase limit |
+| HostSystemdServiceCrashed | Named service down — check which unit | `journalctl -u <name> -n 100` |
+| HostClockSkew | TLS cert validation errors; SIP 401/407 TOTP drift | `chronyc tracking`; `chronyc sources -v` |

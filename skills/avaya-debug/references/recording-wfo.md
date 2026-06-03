@@ -448,3 +448,28 @@ nc -zv <SQL_SERVER_HOST> 1433 && echo "SQL Server port reachable" \
 **Safety rule**: Never run `DELETE FROM dbo.Call` or `TRUNCATE TABLE` on the
 Impact360 database without change control. Recording deletion must go through
 the WFO admin UI retention policy, which logs the deletion audit trail.
+
+
+---
+
+## Prometheus Monitoring — WFO / ACRA Java Services
+
+WFO (WebLogic, RIS, BatchExtender) and ACRA are Java processes. Apply the
+**JVM Exporter alert rules** documented in `aes-cti-jtapi.md` → *Prometheus Alert Rules — JVM Exporter*
+to these services as well. Key thresholds:
+
+| Metric | Warning | Critical | WFO Service |
+|--------|---------|----------|-------------|
+| Heap usage | > 80% | > 95% | WebLogic managed servers, BatchExtender |
+| GC time (% wall clock) | > 5% | > 15% | Any Java process |
+| Old-gen GC rate | > 0.3/min | > 1/min | BatchExtender, Consolidator |
+| Blocked threads | > 20 | > 50 | Consolidator (DB I/O blocked) |
+| FD exhaustion | > 80% | > 90% | ACRA (recording sessions = sockets) |
+
+**Without Prometheus** (use `jstat` + `jstack` directly — see the `jstat -gcutil` and
+`jstack` commands in the `A2 — Java Heap & WebLogic Monitoring` section above).
+
+Apply **node-exporter Linux alert rules** from `linux-server.md` → *Prometheus Alert Rules —
+Node Exporter* to the WFO/ACRA servers — especially `HostOutOfDiskSpace` (recording
+storage full causes silent recording loss) and `HostSystemdServiceCrashed` (WebLogic OOM
+exits without systemd recovery unless a unit file wraps it).

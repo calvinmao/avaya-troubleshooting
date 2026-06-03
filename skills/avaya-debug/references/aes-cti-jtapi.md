@@ -923,3 +923,132 @@ agent platform pattern: detect → classify → act.
 **Cooldown rule**: Do not retry remediation within 300 seconds of a previous
 attempt on the same service. Repeated restart loops mask root cause and risk
 data corruption on in-flight JTAPI transactions.
+
+
+---
+
+## Prometheus Alert Rules — JVM Exporter (AES / WFO / WebLogic)
+
+> Source: [samber/awesome-prometheus-alerts](https://github.com/samber/awesome-prometheus-alerts) (MIT License)
+> Apply to Avaya Java services: AES (JTAPI/TSAPI stack), ACRA/WebLogic, WFO Consolidator/Archiver.
+> Requires `jmx_exporter` or `micrometer` metrics endpoint on the Java service.
+
+### Heap Memory
+
+```yaml
+# JvmMemoryFillingUp — heap > 80% of max
+- alert: JvmMemoryFillingUp
+  expr: |
+    (sum by(instance)(jvm_memory_used_bytes{area="heap"})
+    / sum by(instance)(jvm_memory_max_bytes{area="heap"})) * 100 > 80
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "JVM heap > 80% on {{ $labels.instance }} — GC pressure rising"
+
+# JvmMemoryCritical — heap > 95%
+- alert: JvmMemoryCritical
+  expr: |
+    (sum by(instance)(jvm_memory_used_bytes{area="heap"})
+    / sum by(instance)(jvm_memory_max_bytes{area="heap"})) * 100 > 95
+  for: 0m
+  labels: { severity: critical }
+  annotations:
+    summary: "JVM heap > 95% on {{ $labels.instance }} — OOM imminent; take heap dump NOW"
+```
+
+### Garbage Collection
+
+```yaml
+# JvmGcTimeTooHigh — GC consuming > 5% of wall clock
+- alert: JvmGcTimeTooHigh
+  expr: sum(rate(jvm_gc_collection_seconds_sum[5m])) > 0.05
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "JVM GC time > 5% — stop-the-world pauses affecting JTAPI event processing"
+
+# JvmOldGenGcFrequency — Full GC more than 0.3/min
+- alert: JvmOldGenGcFrequency
+  expr: |
+    rate(jvm_gc_collection_seconds_count{gc=~".*old.*|.*major.*"}[5m]) > 0.3
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "Old-gen (Major) GC rate > 0.3/min — heap sizing or memory leak suspected"
+```
+
+### Threads
+
+```yaml
+# JvmThreadsDeadlocked — deadlock detected
+- alert: JvmThreadsDeadlocked
+  expr: jvm_threads_deadlocked > 0
+  for: 0m
+  labels: { severity: critical }
+  annotations:
+    summary: "JVM deadlock detected on {{ $labels.instance }} — take jstack IMMEDIATELY"
+
+# JvmThreadCountHigh — thread count > 300
+- alert: JvmThreadCountHigh
+  expr: jvm_threads_live > 300
+  for: 2m
+  labels: { severity: warning }
+  annotations:
+    summary: "JVM thread count > 300 on {{ $labels.instance }} — thread leak or executor runaway"
+
+# JvmThreadsBlocked — > 50 threads in BLOCKED state
+- alert: JvmThreadsBlocked
+  expr: jvm_threads_states{state="BLOCKED"} > 50
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "> 50 BLOCKED threads — lock contention; run jstack and look for holding thread"
+```
+
+### File Descriptors
+
+```yaml
+# JvmFileDescriptorsExhaustion — FD usage > 90%
+- alert: JvmFileDescriptorsExhaustion
+  expr: (process_open_fds / process_max_fds) * 100 > 90
+  for: 2m
+  labels: { severity: critical }
+  annotations:
+    summary: "JVM FD usage > 90% on {{ $labels.instance }} — socket/log handle leak"
+```
+
+### JVM Alert-to-Action Table (Avaya Services)
+
+| Alert | Avaya Service Impact | Immediate Action |
+|-------|---------------------|-----------------|
+| JvmMemoryFillingUp | AES: JTAPI event queue slows; WFO: inserts delayed | Check heap with `jstat -gcutil <pid> 5000 12`; identify leak |
+| JvmMemoryCritical | Imminent OOM crash — AES drops CTI sessions | `jmap -dump:format=b,file=/tmp/heap.hprof <pid>`; restart after dump |
+| JvmGcTimeTooHigh | JTAPI deliverEvent() latency spikes; WFO SQL timeouts | `jstat -gccause <pid>`; check GC log for pause duration |
+| JvmOldGenGcFrequency | Memory leak in old gen — heap growing monotonically | Heap dump + MAT analysis; check JTAPI TSCall retention |
+| JvmThreadsDeadlocked | AES stops processing events; WFO Consolidator hangs | `jstack <pid> > /tmp/jstack.txt`; look for deadlock section at end |
+| JvmThreadCountHigh | Thread pool leak — executor not releasing threads | `jstack <pid>`; tally runnable vs blocked; identify leaked pool |
+| JvmThreadsBlocked | Connection pool lock contention; DB I/O blocked | `jstack <pid>`; find holding thread; check if DB is responding |
+| JvmFileDescriptorsExhaustion | New sockets/files cannot open; CTI connections fail | `lsof -p <pid> | wc -l`; identify leaked handles; increase `ulimit -n` |
+
+### Collecting jvm_exporter Metrics (Without Prometheus)
+
+When Prometheus is not deployed, replicate key JVM metrics manually:
+
+```bash
+# Heap usage (via jstat — equivalent to JvmMemoryFillingUp)
+jstat -gcutil $(pgrep -f AESServer) 5000 3
+# Output: S0  S1   E   O   M  CCS  YGC  YGCT  FGC  FGCT   GCT
+# O (Old Gen) > 80% → JvmMemoryFillingUp threshold crossed
+
+# Thread count + state snapshot (equivalent to JvmThreadCountHigh / JvmThreadsBlocked)
+jstack $(pgrep -f AESServer) > /tmp/jstack_$(date +%s).txt
+grep -c "java.lang.Thread.State:" /tmp/jstack_*.txt          # Total thread count
+grep -c "BLOCKED" /tmp/jstack_*.txt                          # Blocked thread count
+grep "deadlock" /tmp/jstack_*.txt                            # Deadlock detection
+
+# FD usage (equivalent to JvmFileDescriptorsExhaustion)
+PID=$(pgrep -f AESServer)
+ls /proc/$PID/fd | wc -l                                     # Current open FDs
+cat /proc/$PID/limits | grep "open files"                    # Max FD limit
+```
