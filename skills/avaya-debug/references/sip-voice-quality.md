@@ -659,3 +659,246 @@ done
 frequently appear as SNMP interface errors on the WAN-side SBC interface when
 the carrier firewall blocks inbound OPTIONS. Correlate sipsak timeout WITH
 outbound OPTIONS counter increasing in SBC stats — asymmetric drop is diagnostic.
+
+
+---
+
+## On-Box Packet Capture & SIP Trace Analysis
+
+Patterns sourced from sngrep, tshark, and field pcap tooling. All commands run
+directly on Avaya Linux servers (RHEL/CentOS) — no GUI or pcap file transfer required.
+
+---
+
+### sngrep — Terminal SIP Call-Flow Ladder
+
+sngrep reads live traffic or `.pcap` files and renders SIP call-flow ladder diagrams
+in the terminal. Critical for SSH-only Avaya Linux servers (SM, AES, ACRA) where
+transferring pcaps to a Wireshark workstation adds friction to SR evidence collection.
+
+```bash
+# Install (enable EPEL first on RHEL/CentOS):
+yum install epel-release && yum install sngrep   # RHEL/CentOS
+apt install sngrep                               # Debian/Ubuntu
+
+# Read existing pcap (exported from traceSBC, tcpdump, or satrace):
+sngrep -I /tmp/sip_capture.pcap
+
+# Live capture on SIP port, save to file simultaneously:
+sngrep -d eth0 -O /tmp/sip_live.pcap port 5060
+
+# INVITE dialogs only (-c = capture only complete dialogs):
+sngrep -d eth0 -c port 5060
+
+# Filter by host from pcap (isolate one carrier or SM entity):
+sngrep -I capture.pcap host <CARRIER_IP> and port 5060
+
+# Include RTP payload data in capture:
+sngrep -d eth0 -r port 5060
+
+# TLS SIP decode (requires sngrep compiled with OpenSSL + server key):
+sngrep -d eth0 -k /opt/avaya/certs/sm_server.key port 5061
+
+# Non-interactive (headless) capture to file only (useful in scripts):
+sngrep -d eth0 -N -O /tmp/out.pcap port 5060
+
+# Combined SIP + RTP (Avaya primary RTP port range):
+sngrep -d any -O /tmp/avaya_sip_rtp.pcap "port 5060 or udp portrange 10000-20000"
+# Alternative RTP range used in some Avaya SM/CM deployments:
+sngrep -d any -O /tmp/avaya_sip_rtp.pcap "port 5060 or udp portrange 16384-32767"
+```
+
+**sngrep keyboard navigation** (once open):
+- Arrow keys: scroll call list | `Enter`: open call-flow ladder
+- `F2`: SIP message fields | `F3`: filter by field (From, To, Call-ID)
+- `F7`: filter dialog by status | `Space`: select call for export | `q`: quit
+
+---
+
+### tshark — Scriptable SIP/RTP Analysis
+
+```bash
+# SIP method + response statistics (call-volume dashboard):
+tshark -r capture.pcap -q -z sip,stat
+
+# SIP call-flow CSV (SR attachment quality — structured evidence):
+tshark -r capture.pcap -Y sip \
+  -T fields \
+  -e frame.time_relative -e ip.src -e ip.dst \
+  -e sip.Method -e sip.Status-Code \
+  -e sip.Call-ID -e sip.CSeq \
+  -E header=y -E separator=, > /tmp/sip_flow.csv
+
+# Filter by SIP Call-ID (correlate with CM UCID or JTAPI call-id):
+tshark -r capture.pcap -Y 'sip.Call-ID == "abc123@192.168.1.1"'
+
+# SIP errors only (4xx/5xx — fast identification of rejection cause):
+tshark -r capture.pcap -Y 'sip.Status-Code >= 400' \
+  -T fields -e frame.time -e ip.src -e ip.dst -e sip.Status-Code -e sip.Status-Line
+
+# INVITE only (call setup failures):
+tshark -r capture.pcap -Y 'sip.CSeq.method == "INVITE"'
+
+# OPTIONS keep-alive trace (diagnose carrier OPTIONS blocking — see L-001):
+tshark -r capture.pcap \
+  -Y 'sip.Method == "OPTIONS" or sip.Status-Code == 200' \
+  -T fields -e frame.time -e ip.src -e ip.dst -e sip.Method -e sip.Status-Code
+
+# SIP Digest auth headers (diagnose 401/407 registration failures):
+tshark -r capture.pcap -Y 'sip.Status-Code == 401 or sip.Status-Code == 407' \
+  -T fields -e frame.time -e ip.src -e sip.Status-Code -e sip.www_authenticate
+
+# RTP stream statistics — jitter, loss, delta per stream (voice quality audit):
+tshark -r capture.pcap -q -z rtp,streams
+# Output columns: Start | End | Src IP:Port | Dst IP:Port | SSRC | Payload |
+#   Pkts | Lost | Delta ms (min/mean/max) | Jitter ms (min/mean/max) | Problems
+# Thresholds: Jitter > 30ms, Loss > 1%, Delta variance > 50ms = voice degraded
+
+# Filter RTP by codec payload type:
+tshark -r capture.pcap -Y 'rtp.p_type == 0'    # G.711 u-law (PCMU)
+tshark -r capture.pcap -Y 'rtp.p_type == 8'    # G.711 A-law (PCMA)
+tshark -r capture.pcap -Y 'rtp.p_type == 18'   # G.729
+tshark -r capture.pcap -Y 'rtp.p_type == 101'  # RFC 2833 DTMF telephone-event
+
+# DTMF event extraction (verify IVR DTMF delivery):
+tshark -r capture.pcap -Y 'rtp.p_type == 101' \
+  -T fields -e frame.time -e ip.src -e ip.dst \
+  -e rtpevent.event_id -e rtpevent.end_of_event
+
+# Export RTP streams as raw audio files for MOS / playback audit:
+tshark -r capture.pcap --export-objects rtp,/tmp/rtp_streams/
+# Convert raw G.711 u-law to WAV (requires ffmpeg):
+for f in /tmp/rtp_streams/*.raw; do
+  ffmpeg -f mulaw -ar 8000 -ac 1 -i "$f" "${f%.raw}.wav" 2>/dev/null
+done
+echo "WAV files in /tmp/rtp_streams/ -- open in Audacity or VLC for playback audit"
+
+# tcpflow: reconstruct TCP SIP sessions from pcap (SIP over TCP stream recovery):
+# yum install tcpflow
+tcpflow -r capture.pcap port 5060
+# Creates per-stream files: <srcIP.port>-<dstIP.port> with raw SIP messages in order
+```
+
+---
+
+### Wireshark / tshark Display Filters (SIP & RTP)
+
+Copy-paste into Wireshark display filter bar or pass via `tshark -Y`:
+
+```
+# SIP
+sip                                        All SIP traffic
+sip.Method == "INVITE"                     Call setup
+sip.Method == "BYE"                        Call teardown
+sip.Method == "REGISTER"                   Registration
+sip.Method == "OPTIONS"                    Keep-alive probe
+sip.Status-Code >= 400                     All SIP errors
+sip.Status-Code == 401                     Auth challenge
+sip.Status-Code == 403                     Forbidden (IP/credential)
+sip.Status-Code == 404                     User not found
+sip.Status-Code == 408                     Request timeout (firewall)
+sip.Status-Code == 486                     Busy Here
+sip.Status-Code == 503                     Service unavailable
+sip.Call-ID == "id@host"                   Isolate single call
+sip or rtp                                 Combined SIP + media view
+
+# RTP
+rtp                                        All RTP
+rtp.p_type == 0                            PCMU G.711 u-law
+rtp.p_type == 8                            PCMA G.711 A-law
+rtp.p_type == 18                           G.729
+rtp.p_type == 101                          RFC 2833 DTMF
+rtcp                                       RTCP control (jitter stats)
+
+# Network anomalies
+tcp.analysis.retransmission                TCP retransmissions (packet loss)
+tcp.analysis.out_of_order                  Out-of-order packets (jitter)
+tcp.flags.rst == 1                         TCP resets (mid-call drops)
+tcp.flags.syn == 1 and tcp.flags.ack == 0  New connection attempts only
+ssl.handshake.type == 1                    TLS ClientHello (SIP TLS setup)
+```
+
+**BPF capture filters** (for `tcpdump -f` or Wireshark capture filter):
+```bash
+# SIP + RTP (Avaya default RTP range):
+port 5060 or port 5061 or udp portrange 10000-20000
+
+# SIP + alternate RTP range (some SM/CM deployments):
+port 5060 or port 5061 or udp portrange 16384-32767
+
+# External SIP only (exclude RFC1918 internal traffic):
+port 5060 and not (net 10.0.0.0/8 or net 172.16.0.0/12 or net 192.168.0.0/16)
+
+# SYN packets only (registration flood diagnosis):
+tcp port 5060 and tcp[tcpflags] & tcp-syn != 0
+
+# SIP + JTAPI combined (AES + SM in one capture file):
+port 5060 or port 5061 or port 1099 or port 4722
+```
+
+---
+
+### ngrep — Grep SIP Payloads Without Wireshark
+
+```bash
+# yum install ngrep (or apt install ngrep)
+
+# Search live traffic for INVITE to a specific number:
+ngrep -d eth0 -W byline "INVITE sip:.*4085551234" port 5060
+
+# Search pcap file for 401 Unauthorized responses:
+ngrep -I capture.pcap "401 Unauthorized" port 5060
+
+# Show SDP bodies containing G.729 codec:
+ngrep -I capture.pcap -W byline "a=rtpmap:18 G729" port 5060
+
+# Check RFC 2833 DTMF negotiation in SDP:
+ngrep -I capture.pcap "telephone-event" port 5060
+# Zero matches = DTMF not negotiated in SDP -> configure phone/SBC codec list
+
+# Count SIP REGISTER flood rate:
+ngrep -I capture.pcap -c "REGISTER sip:" port 5060
+```
+
+---
+
+### SIP Response Code Quick Reference
+
+| Code | Meaning | Avaya Diagnostic Action |
+|------|---------|------------------------|
+| 200 | OK | Successful — verify RTP media follows |
+| 401 | Unauthorized | Check SM SIP Entity credentials / realm |
+| 403 | Forbidden | IP not whitelisted on carrier; check ACL / SBC policy |
+| 404 | Not Found | Wrong SIP URI format or SM routing policy |
+| 408 | Request Timeout | Firewall blocking 5060/5061; confirm with `nc -zv` |
+| 481 | Call Leg Does Not Exist | BYE for unknown Call-ID; check state sync |
+| 486 | Busy Here | Agent unavailable; check AACC skill queue |
+| 487 | Request Terminated | Caller abandoned before answer; expected |
+| 488 | Not Acceptable Here | Codec mismatch; compare SDP offer vs. answer |
+| 500 | Server Internal Error | SM or gateway fault; check server logs |
+| 503 | Service Unavailable | Downstream overload or component down |
+| 603 | Decline | Explicit rejection by called party |
+
+---
+
+### DTMF SDP Verification in Capture
+
+Before suspecting IVR / AEP DTMF delivery failure, verify DTMF was negotiated in SDP:
+
+```bash
+# Extract SDP codec lines from INVITE to check telephone-event:
+tshark -r capture.pcap -Y 'sip.Method == "INVITE"' -T text | grep -A5 "a=rtpmap"
+# Expected RFC 2833 negotiation in SDP body:
+#   a=rtpmap:101 telephone-event/8000
+#   a=fmtp:101 0-15
+
+# Quick check with ngrep:
+ngrep -I capture.pcap "telephone-event" port 5060
+# Zero results -> RFC 2833 not negotiated -> configure endpoints to include it
+# Or switch both sides to SIP INFO DTMF if telephone-event cannot be enabled
+
+# telephone-event in SDP but DTMF still missing at AEP:
+tshark -r capture.pcap -Y 'rtp.p_type == 101' | wc -l
+# Zero RTP p_type=101 packets despite SDP negotiation
+# -> Media bypasses AEP (direct-media / hairpinning); check CM direct-media setting
+```
