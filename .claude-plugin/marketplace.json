@@ -1,0 +1,18 @@
+{
+  "name": "avaya-troubleshooting-dev",
+  "description": "Local development marketplace for avaya-troubleshooting plugin",
+  "owner": {
+    "name": "hmao911"
+  },
+  "plugins": [
+    {
+      "name": "avaya-troubleshooting",
+      "description": "Senior Avaya UC & CC troubleshooting expert for AES, JTAPI, AACC, Oceana, POM, Recording, Analytics, SIP, and more.",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "hmao911"
+      }
+    }
+  ]
+}

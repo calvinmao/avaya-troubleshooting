@@ -1,0 +1,9 @@
+{
+  "name": "avaya-troubleshooting",
+  "version": "1.0.0",
+  "description": "Senior Avaya UC & CC troubleshooting expert. Diagnoses faults across AES, JTAPI, TSAPI, CSTA, DMCC, AACC, Oceana, POM, Recording, Analytics, SIP, certificates, email/social channels, IP Office, and more. Includes structured SR workflows, trace analysis, and cross-layer correlation.",
+  "author": {
+    "name": "hmao911"
+  },
+  "keywords": ["avaya", "uc", "cc", "aes", "jtapi", "aacc", "oceana", "pom", "recording", "troubleshooting", "sip"]
+}
