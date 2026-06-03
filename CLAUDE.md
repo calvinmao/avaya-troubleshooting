@@ -55,6 +55,9 @@ Each reference file is self-contained for its domain. Commands reference them vi
 | `ip-office.md` | IP Office, SSA, SysMonitor, ACCS+IPO |
 | `log-collection.md` | getlogs, trace enables, tcpdump, log levels |
 | `orchestration-integration.md` | POM + Oceana, callback delivery, CCMM, Workspace, async channels, cross-product orchestration |
+| `linux-server.md` | Linux OS health, systemd, CPU/memory/disk, kernel, sysctl, SELinux, journalctl, OOM |
+| `network-infrastructure.md` | TCP/IP, DNS, routing, firewall, packet capture, QoS, VLAN, MTU, iperf3, tcpdump |
+| `cloud-infrastructure.md` | AWS, Azure, EC2/VM, VPC/VNet, NSG/SG, VPN, CloudWatch, EKS/AKS, S3/Blob, AXP |
 
 ## Extending the Plugin
 
@@ -80,6 +83,50 @@ The plugin grows from real cases through a two-tier capture flow:
 2. **Promote** — If a lesson meets the promotion rule in `skills/avaya-debug/lessons/README.md` — reproduced across ≥2 SR cases OR identifies a generalizable code path / trace string / config flag — `/avaya-learn` proposes a concrete edit to the canonical `references/<domain>.md`. On approval the edit is applied and the lesson's `Promotion:` line is updated with the target anchor and date.
 
 Lessons auto-load whenever their matching reference loads, so accumulated field knowledge is always available the moment the right domain activates. When an `L-NNN` ID appears in a report or analysis, find it under `skills/avaya-debug/lessons/` — the `Provenance:` line gives the source SR for verification.
+
+## IT Ops Maintenance Patterns
+
+Reference files have been enriched with general Linux/Java/database health patterns adapted
+from IT operations automation best practices. These apply to all Avaya Linux-based servers
+(AES, SM, AACC, ACRA, CCMM, EPM, etc.) without modification.
+
+### What was added (and where)
+
+| Pattern Category | Reference File | Section |
+|------------------|---------------|---------|
+| Proactive server health (CPU, memory, disk, systemd) | `log-collection.md` | Proactive Server Health Commands |
+| Auto-remediation playbooks (log rotation, service restart) | `log-collection.md` | Auto-Remediation Playbooks |
+| SNMP monitoring (Avaya enterprise MIB `.1.3.6.1.4.1.6889`) | `log-collection.md` | SNMP Monitoring |
+| Monitoring thresholds table | `log-collection.md` | Monitoring Thresholds |
+| Command safety rules (blocked / approval-required) | `log-collection.md` | Command Safety Rules |
+| Certificate expiry detection + live HTTPS probe | `certificates-login-outage.md` | Certificate Health Commands (B1) |
+| Certificate near-expiry remediation playbook | `certificates-login-outage.md` | Auto-Remediation: Cert Near-Expiry (B2) |
+| Post-cert-change restart sequence | `certificates-login-outage.md` | Post-Cert-Change Restart Sequence (B3) |
+| AES PostgreSQL connection pool monitoring | `aes-cti-jtapi.md` | C1 — AES PostgreSQL Connection Pool |
+| AES database backup + integrity check | `aes-cti-jtapi.md` | C2 — AES Database Backup |
+| CPU spike → jstack + automated alert | `aes-cti-jtapi.md` | D3 — CPU Spike → Heap Dump |
+| Alert → Diagnose → Remediate 3-node workflow | `aes-cti-jtapi.md` | F4 — Workflow Template |
+| WebLogic/ACRA heap monitoring + GC watch | `recording-wfo.md` | A2 — Java Heap & WebLogic Monitoring |
+| WFO SQL Server / Oracle JDBC connection health | `recording-wfo.md` | C3 — WFO SQL Server Connection Health |
+| SIP stack port connectivity verification | `sip-voice-quality.md` | A3 — Port Connectivity Verification |
+| SBC/router SNMP + sipsak OPTIONS health check | `sip-voice-quality.md` | E1 — SBC / Router Interface Health |
+
+### Auto-remediation safety invariants
+
+Adapted from the IT ops command safety filter. These constraints are embedded in the
+reference files above and must be preserved when adding new playbooks:
+
+- **Never auto-execute** `systemctl stop/start` on CM, SMGR, WebLM, or AES without
+  explicit change-control approval.
+- **Always read-only first**: health check commands (`ps`, `jstat`, `netstat`, `df`,
+  `snmpget`) require no approval; use them freely.
+- **Cooldown 300 s**: do not retry the same remediation action within 5 minutes.
+- **Rollback trigger**: if a metric does not improve within 10 minutes of remediation,
+  stop and escalate — do not loop.
+- **Never run**: `rm -rf /`, `iptables -F`, `kill -9 0`, `DROP DATABASE` without
+  explicit human approval outside of automated tooling.
+
+---
 
 ## Key Diagnostic Invariants (Do Not Change Without Evidence)
 

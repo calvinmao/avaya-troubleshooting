@@ -16,6 +16,10 @@ This directory accumulates evidence-anchored findings from real SR cases. Each f
 | `digital-channels.md` | `../references/digital-channels.md` |
 | `ip-office.md` | `../references/ip-office.md` |
 | `log-collection.md` | `../references/log-collection.md` |
+| `orchestration-integration.md` | `../references/orchestration-integration.md` |
+| `linux-server.md` | `../references/linux-server.md` |
+| `network-infrastructure.md` | `../references/network-infrastructure.md` |
+| `cloud-infrastructure.md` | `../references/cloud-infrastructure.md` |
 
 ## Entry Template
 

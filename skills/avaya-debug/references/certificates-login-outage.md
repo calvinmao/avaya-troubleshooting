@@ -391,3 +391,92 @@ Cross-FY patterns extracted from §4.10–§4.13. Restricted to certificate / We
 | **NGINX config lost after reboot** | Custom NGINX config on Breeze reverts after reboot | Breeze startup overwrites custom NGINX | Place custom config in persistent override location (per `1-18936614672`) |
 | **SNMP stops working suddenly** | NMS cannot poll SNMP MIBs | SNMP agent crashed or port blocked | Restart SNMP; check port conflicts or firewall (per `1-17130096288`) |
 
+
+---
+
+## Certificate Health Commands
+
+### Certificate Expiry Detection (B1)
+
+```bash
+# Check a PEM/CRT file directly
+CERT_FILE="/opt/avaya/certs/server.crt"
+openssl x509 -in $CERT_FILE -noout -enddate -subject
+
+# Check expiry with days-remaining (alert if <30 days)
+openssl x509 -in $CERT_FILE -noout -checkend $((30*86400)) \
+  && echo "OK: cert valid >30 days" \
+  || echo "ALERT: cert expires within 30 days"
+
+# Scan all Avaya certs and sort by days remaining
+for cert in /opt/avaya/certs/*.crt /etc/pki/tls/certs/*.crt 2>/dev/null; do
+  [ -f "$cert" ] || continue
+  EXPIRY=$(openssl x509 -in "$cert" -noout -enddate 2>/dev/null | cut -d= -f2)
+  DAYS=$(( ( $(date -d "$EXPIRY" +%s) - $(date +%s) ) / 86400 ))
+  echo "$DAYS days | $cert"
+done | sort -n | head -20
+
+# Check live HTTPS endpoint (WebLM, EPM, SM, SMGR)
+echo | openssl s_client -connect <weblm-host>:443 -servername <weblm-host> 2>/dev/null \
+  | openssl x509 -noout -enddate -subject
+
+echo | openssl s_client -connect <smgr-host>:443 2>/dev/null \
+  | openssl x509 -noout -enddate -issuer
+```
+
+### Auto-Remediation: Certificate Near-Expiry Playbook (B2)
+
+```
+Alert keyword match: ["certificate", "expir", "cert", "ssl", "tls"]
+Severity: high
+Execution mode: approval  ← cert renewal ALWAYS requires human confirmation on Avaya
+Cooldown: 86400 seconds (cert alerts fire repeatedly — suppress after first action)
+
+Verification command:
+  openssl x509 -in <cert> -noout -checkend 0
+
+Remediation workflow:
+  Step 1 (auto):    openssl x509 -in <cert> -noout -enddate -subject
+                    → confirm which cert is expiring
+  Step 2 (human):   Generate/import new cert via SMGR or Avaya cert wizard
+  Step 3 (human):   Import into trust stores (JKS) per restart sequence below
+  Step 4 (auto):    Verify: echo | openssl s_client -connect <host>:443 2>/dev/null
+                             | openssl x509 -noout -enddate
+
+Note: Mid-session cert expiry only affects calls when SDP renegotiation occurs
+      (transfer, hold/resume). Schedule renewal in maintenance window.
+```
+
+### Post-Cert-Change Restart Sequence (B3)
+
+```bash
+# Step 0: backup trust store before any changes
+cp /opt/avaya/truststore.jks /opt/avaya/truststore.jks.bak.$(date +%Y%m%d)
+
+# Step 1: import new cert into Java trust store
+keytool -import -trustcacerts \
+  -alias avaya-new-cert \
+  -file /tmp/new-cert.crt \
+  -keystore /opt/avaya/truststore.jks \
+  -storepass <password> -noprompt
+
+# Step 2: restart in dependency order
+# AES (csta-server)
+systemctl restart avaya-aes || service avaya-aes restart
+
+# Session Manager — via SMGR UI:
+# Elements > Session Manager > select instance > Restart
+
+# WebLM
+# /opt/avaya/weblm/bin/shutdown.sh && sleep 15 && /opt/avaya/weblm/bin/startup.sh
+
+# Step 3: clear browser cache on all operator workstations before declaring success
+# (Ctrl+Shift+Delete in Chrome/Edge — otherwise stale TLS session resumed)
+
+# Step 4: verify (wait 60s for services to stabilize)
+sleep 60
+echo | openssl s_client -connect <host>:443 2>/dev/null \
+  | openssl x509 -noout -enddate
+```
+
+> **Invariant**: After any certificate change — inventory ALL JKS stores, restart ALL dependent services, clear browser cache on workstations. Missing any one of the three causes intermittent failures that are hard to reproduce.

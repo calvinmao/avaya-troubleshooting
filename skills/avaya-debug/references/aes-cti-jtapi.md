@@ -728,3 +728,198 @@ Critical trace fields per event:
     - @hashcode: same = reuse, different = reconstruction
     - connections list: TSConnection[conn:(callID,address)] with state
 ```
+
+---
+
+## AES Server Health & Database Diagnostics (IT Ops Patterns)
+
+Adapted from IT operations automation platform patterns. Applies to AES Linux hosts
+running PostgreSQL (CDR/CTI store), Java/JTAPI service JVMs, and DMCC provisioning.
+
+### C1 — AES PostgreSQL Connection Pool Monitoring
+
+AES relies on PostgreSQL for CDR storage, DMCC device-state persistence, and
+CTI route data. Connection pool exhaustion silently degrades JTAPI performance
+before producing visible errors.
+
+```bash
+# Connection pool usage snapshot
+psql -U postgres -c "
+  SELECT state, count(*) AS connections,
+         max(now() - state_change) AS longest_idle
+  FROM pg_stat_activity
+  WHERE datname = 'aes'
+  GROUP BY state
+  ORDER BY connections DESC;
+"
+
+# Identify long-running or idle-in-transaction connections (>5 min)
+psql -U postgres -c "
+  SELECT pid, usename, state,
+         round(extract(epoch FROM now() - state_change)) AS idle_secs,
+         left(query, 80) AS query_snippet
+  FROM pg_stat_activity
+  WHERE datname = 'aes'
+    AND state_change < now() - interval '5 minutes'
+  ORDER BY idle_secs DESC;
+"
+
+# Table bloat / dead-tuple accumulation (run weekly)
+psql -U aes -c "
+  SELECT schemaname, tablename,
+         n_dead_tup, n_live_tup,
+         round(100.0 * n_dead_tup / nullif(n_live_tup + n_dead_tup, 0), 1) AS dead_pct
+  FROM pg_stat_user_tables
+  WHERE n_dead_tup > 1000
+  ORDER BY n_dead_tup DESC;
+"
+
+# Replication lag (if AES geo-redundant standby configured)
+psql -U postgres -c "
+  SELECT client_addr, state, sent_lsn, write_lsn, replay_lsn,
+         (sent_lsn - replay_lsn) AS replay_lag_bytes
+  FROM pg_stat_replication;
+"
+```
+
+**Thresholds**:
+| Metric | Warning | Critical |
+|--------|---------|----------|
+| Active connections | >80% of `max_connections` | >95% |
+| Idle-in-transaction | >30 sec | >120 sec |
+| Dead-tuple ratio | >10% | >25% |
+| Replication lag | >10 MB | >50 MB |
+
+**Remediation**: Kill idle-in-transaction connections with
+`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction';`
+then run `VACUUM ANALYZE` on bloated tables. Never terminate `pg_wal_sender` processes.
+
+---
+
+### C2 — AES Database Backup & Integrity Check
+
+```bash
+# Daily PostgreSQL dump (run from cron, AES backup user)
+pg_dump -U aes -Fc aes > /opt/avaya/backup/aes_$(date +%Y%m%d).dump
+# Verify dump integrity immediately after
+pg_restore --list /opt/avaya/backup/aes_$(date +%Y%m%d).dump | wc -l
+# Should be >0; if 0 or error — dump is corrupt, re-run immediately
+
+# Purge backups older than 14 days
+find /opt/avaya/backup -name "aes_*.dump" -mtime +14 -delete
+
+# Check PostgreSQL data directory disk usage
+du -sh /var/lib/pgsql/data/
+df -h /var/lib/pgsql/
+
+# Verify WAL archiving is not accumulating (geo-redundancy mode)
+ls -lh /var/lib/pgsql/data/pg_wal/ | tail -5
+# If WAL files accumulate >1 GB, archiving stalled — check standby connectivity
+```
+
+**Safety rules**:
+- NEVER run `DROP DATABASE` or `TRUNCATE` on the `aes` database without explicit change-control approval.
+- Backup job should use a dedicated `aes_backup` role with `pg_read_all_data` only.
+- Verify backup disk is separate from data disk (single-disk failure must not lose both).
+
+---
+
+### D3 — CPU Spike → Heap Dump + Thread Analysis
+
+When AES JVM (JTAPI service, WebSphere, or DMCC) shows sustained CPU >90%:
+
+```bash
+# Step 1 — Identify the AES JVM process
+ps -eo pid,pcpu,pmem,comm --sort=-pcpu | head -10
+# Look for: java (jtapi), java (WebSphere/dmcc), postgres
+
+# Step 2 — Thread-level CPU breakdown
+top -H -p <PID> -b -n 1 | head -30
+# Note the top 3 thread IDs (TIDs) in hex for jstack correlation
+
+# Step 3 — Capture thread dump (safe, non-disruptive)
+sudo -u avaya jstack -l <PID> > /tmp/aes_threaddump_$(date +%H%M%S).txt
+# Repeat 3× at 10-sec intervals to identify stuck vs. spinning threads
+
+# Step 4 — Correlate high-CPU TIDs to stack frames
+# Convert top TID (decimal) → hex, then grep jstack output:
+printf "%x\n" <TID_DECIMAL>
+grep -A 20 "nid=0x<TID_HEX>" /tmp/aes_threaddump_*.txt
+
+# Step 5 — Heap snapshot if OOM suspected (requires approval — pauses JVM)
+# sudo -u avaya jmap -dump:format=b,file=/tmp/aes_heap_$(date +%Y%m%d).hprof <PID>
+
+# Step 6 — GC health check (no pause)
+sudo -u avaya jstat -gcutil <PID> 1000 10
+# Columns: S0, S1, E (Eden), O (Old), M (Metaspace), YGC, YGCT, FGC, FGCT
+# Alert if: O > 85% between Full GC cycles; FGCT increases faster than 1 min/hour
+```
+
+**Automated alert rule** (add to `/opt/avaya/scripts/cpu_watch.sh` for cron):
+```bash
+#!/bin/bash
+THRESHOLD=90
+PID=$(pgrep -f "jtapi|dmcc" | head -1)
+CPU=$(ps -p "$PID" -o pcpu= | tr -d ' ')
+if (( $(echo "$CPU > $THRESHOLD" | bc -l) )); then
+  jstack -l "$PID" > /tmp/aes_threaddump_$(date +%H%M%S).txt
+  echo "CPU spike on AES JVM PID $PID: ${CPU}%. Thread dump saved." \
+    | mail -s "AES CPU Alert $(hostname)" avaya-ops@yourcompany.com
+fi
+```
+Add to cron: `*/5 * * * * /opt/avaya/scripts/cpu_watch.sh`
+
+---
+
+### F4 — Alert → Diagnose → Remediate Workflow Template
+
+Three-node workflow for repeatable AES incident response. Mirrors the IT ops
+agent platform pattern: detect → classify → act.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  NODE 1: ALERT DETECTION                                │
+│  Trigger: monitoring threshold crossed OR SR opened     │
+│  Actions:                                               │
+│    1. Capture snapshot: ps, top, df, free, netstat      │
+│    2. Tail last 200 lines of relevant log               │
+│    3. Classify: CPU / Memory / Disk / Network / Service │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  NODE 2: DIAGNOSIS                                      │
+│  Based on classification from Node 1:                   │
+│                                                         │
+│  CPU spike    → jstack × 3, jstat -gcutil              │
+│  Memory/OOM   → jmap -heap (approval required)          │
+│  Disk full    → du -sh /var/log/avaya; find old logs    │
+│  Network      → ss -s; netstat -anp; ping gateway       │
+│  Service down → systemctl status; journalctl -u -n 100  │
+│  DB           → pg_stat_activity; check connections     │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  NODE 3: REMEDIATION                                    │
+│  Auto-safe (no approval):                               │
+│    - Compress/rotate logs >7 days                       │
+│    - VACUUM ANALYZE on bloated tables                   │
+│    - systemctl restart avaya-jtapi (if not CM/SMGR)    │
+│                                                         │
+│  Require approval:                                      │
+│    - systemctl stop/start for CM, SMGR, WebLM, AES     │
+│    - pg_terminate_backend (idle-in-transaction)         │
+│    - jmap heap dump                                     │
+│    - Any config file change                             │
+│                                                         │
+│  Always:                                                │
+│    - Document before/after in SR notes                  │
+│    - Set rollback trigger (if metric doesn't improve    │
+│      within 10 min → escalate, do not retry)           │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Cooldown rule**: Do not retry remediation within 300 seconds of a previous
+attempt on the same service. Repeated restart loops mask root cause and risk
+data corruption on in-flight JTAPI transactions.

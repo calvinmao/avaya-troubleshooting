@@ -328,3 +328,123 @@ SELECT * FROM [Common].[dbo].[DataSource] WHERE Name = '<source-name>'
 | Import/Export | %IMPACT360DATADIR%\Logs\IEM\extraction.log, extractionManager.log |
 | Transcription Repo | %IMPACT360DATADIR%\Logs\TranscriptionRepositoryService\trs.log |
 | Real-Time Analytics | %IMPACT360DATADIR%\Logs\AnalyticsService\analyticsservice.log |
+
+---
+
+## Recording Server Java & Database Health (IT Ops Patterns)
+
+Adapted from IT operations automation platform patterns. Applies to ACRA/WFO/WFE
+hosts running WebLogic JVMs (ACRA) and SQL Server / Oracle backends (Impact 360).
+
+### A2 — Java Heap & WebLogic Monitoring for ACRA / WFO
+
+ACRA and Impact 360 both run on Java application servers (WebLogic for ACRA,
+Tomcat variants for Impact 360 components). Heap exhaustion causes recording
+stalls and silent audio loss before any OOM event fires.
+
+```bash
+# Identify WebLogic / Tomcat PID on ACRA server
+ps -eo pid,pcpu,pmem,comm,args --sort=-pmem | grep -E "java|weblogic" | head -5
+
+# Live GC monitoring — watch for Full GC frequency and pause duration
+# Run for 60 seconds (60 samples × 1 sec interval):
+jstat -gcutil <WEBLOGIC_PID> 1000 60
+# Alert thresholds:
+#   O (Old Gen) > 85% between collections → heap leak
+#   FGCT increasing faster than 2 sec per 10 min → GC overhead
+#   Full GC > 1/min → memory pressure causing recording pauses
+
+# Heap summary (non-disruptive)
+jmap -heap <WEBLOGIC_PID> 2>/dev/null | grep -E "Heap|used|capacity|free"
+
+# Thread dump for hung recording threads (safe, repeat 3×)
+jstack -l <WEBLOGIC_PID> > /tmp/acra_threads_$(date +%H%M%S).txt
+# Look for: BLOCKED threads on RTPListener, PauseResumeHandler, CTIEventQueue
+
+# WebLogic server log tail (last 50 lines):
+tail -50 $DOMAIN_HOME/servers/AdminServer/logs/AdminServer.log
+# Alert on: OutOfMemoryError, GC overhead limit exceeded, SocketTimeout in CTI
+
+# JVM startup flags verification (confirm -Xmx and GC settings):
+ps -p <WEBLOGIC_PID> -o args= | tr ' ' '\n' | grep -E "Xmx|Xms|GC|MaxGC"
+# Recommended for ACRA: -Xmx4g -XX:MaxGCPauseMillis=200 -XX:+UseG1GC
+```
+
+**Common ACRA heap issues and fixes**:
+| Symptom | Heap Indicator | Fix |
+|---------|----------------|-----|
+| Recording timer drift (L-001) | Full GC >500ms during pause/resume | Set `-XX:MaxGCPauseMillis=200`, increase `-Xmx` |
+| Audio gaps at shift start | Old Gen spikes to 95% at login surge | Pre-warm JVM; schedule GC before peak shift |
+| Recording stops mid-call | OOM on RTPBuffer thread | Increase heap; check for RTP buffer leak in log |
+
+**Automated WebLogic heap alert** (add to ACRA server cron):
+```bash
+#!/bin/bash
+WL_PID=$(pgrep -f "weblogic" | head -1)
+OLD_GEN=$(jstat -gcutil "$WL_PID" 1 1 | awk 'NR==2{print $4}' | cut -d. -f1)
+if [ "$OLD_GEN" -gt 85 ]; then
+  jstack -l "$WL_PID" > /tmp/acra_heap_alert_$(date +%Y%m%d_%H%M%S).txt
+  echo "ACRA WebLogic Old Gen at ${OLD_GEN}% on $(hostname). Thread dump saved." \
+    | mail -s "ACRA Heap Alert" avaya-ops@yourcompany.com
+fi
+```
+Add to cron: `*/10 * * * * /opt/avaya/scripts/acra_heap_watch.sh`
+
+---
+
+### C3 — WFO SQL Server / Oracle Connection Health (ODBC / JDBC)
+
+Impact 360 (WFO) uses SQL Server (Windows) or Oracle as its recording metadata
+database. Connection failures cause recording jobs to silently drop — calls are
+captured as audio files but never indexed in the WFO database.
+
+```bash
+# --- Linux-side JDBC connectivity test (if WFO gateway on Linux) ---
+
+# Test SQL Server JDBC connectivity from ACRA/gateway host:
+# (Requires: jtds or mssql-jdbc jar in classpath)
+java -cp /opt/avaya/lib/jtds-1.3.1.jar \
+  net.sourceforge.jtds.jdbc.Driver \
+  "jdbc:jtds:sqlserver://<SQL_SERVER_HOST>:1433/Impact360" \
+  -u wfo_svc -p '<password>' \
+  -e "SELECT COUNT(*) FROM dbo.Call WHERE StartTime > GETDATE() - 1"
+# Expected: integer row count. Failure = connectivity or auth problem.
+
+# Check JDBC driver connection pool metrics from WebLogic console:
+# WL Console → Domain → Services → JDBC → Data Sources → Impact360DS
+#   → Monitoring → Statistics
+# Alert: ActiveConnectionsCurrentCount / MaxCapacity > 80%
+
+# TCP reachability to SQL Server (always run before JDBC test):
+nc -zv <SQL_SERVER_HOST> 1433 && echo "SQL Server port reachable" \
+  || echo "BLOCKED — check firewall/SQL Browser service"
+
+# --- Windows-side ODBC test (run on WFO application server) ---
+# From PowerShell:
+# Test-NetConnection -ComputerName <SQL_SERVER_HOST> -Port 1433
+# odbcconf /a {CONFIGSYSDSN "SQL Server" "DSN=Impact360|Server=<HOST>|Database=Impact360"}
+
+# SQL Server connection pool status (run on SQL Server directly):
+# SELECT DB_NAME(dbid) AS db, COUNT(*) AS connections
+# FROM sys.sysprocesses
+# WHERE dbid > 0 AND DB_NAME(dbid) = 'Impact360'
+# GROUP BY dbid;
+```
+
+**Connection health thresholds**:
+| Metric | Warning | Critical |
+|--------|---------|----------|
+| JDBC active connections / max | >70% | >90% |
+| SQL Server connection count for Impact360 DB | >150 | >200 |
+| JDBC connection wait time | >2 sec | >10 sec |
+
+**Common recording-database desync patterns**:
+| Symptom | Root Cause | Fix |
+|---------|------------|-----|
+| Audio exists, call not in WFO search | JDBC pool exhausted; insert failed | Increase JDBC max capacity; add retry in Consolidator |
+| Duplicate call records | Consolidator restarted mid-write | Check `callsconsolidator.log` for duplicate-key errors; purge via WFO admin |
+| Archiver jobs stuck | Oracle tablespace full | Check `dba_tablespace_usage_metrics`; add datafile or purge old recordings |
+
+**Safety rule**: Never run `DELETE FROM dbo.Call` or `TRUNCATE TABLE` on the
+Impact360 database without change control. Recording deletion must go through
+the WFO admin UI retention policy, which logs the deletion audit trail.

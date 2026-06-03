@@ -509,3 +509,195 @@ tcpdump -i eth0 -n -nn -v -vv -s 0 host <Target_IP> or port <Port_Number> -w /tm
 **Analysis tips:**
 - **TLS Handshakes:** Verify Client/Server Hello and certificate validity
 - **SIP/RTP:** Check SIP response codes (408 Timeout, 200 OK) and RTP packet flow
+
+---
+
+## Proactive Server Health Commands
+
+> Applicable to all Avaya Linux servers: AES, Session Manager, EPM, AACC, ACRA. Run ad-hoc or via cron.
+
+### Quick Health Check (A1)
+
+```bash
+echo "=== Avaya Server Health: $(hostname) | $(date) ==="
+echo "--- CPU (top 5 processes) ---"
+top -bn1 | head -15
+echo "--- Memory ---"
+free -h
+echo "--- Disk (Avaya paths: /var/log/avaya, /opt/avaya, /tmp) ---"
+df -h | grep -E "Filesystem|avaya|opt|log|tmp"
+echo "--- System Load ---"
+uptime
+echo "--- Network — Avaya ports (5060 SIP | 5061 SIP-TLS | 1099 JTAPI | 8443 AES-HTTPS | 4445 TSAPI | 7001 WebLogic) ---"
+ss -tuln | grep -E '5060|5061|1099|8443|4445|7001'
+echo "--- Java/Avaya Processes ---"
+ps aux | grep -E '[Jj]ava|csta|weblogic|avaya' | grep -v grep
+```
+
+### Service Status Check — systemd (A4)
+
+```bash
+services=("csta-server" "avaya-aes" "weblogic" "jboss" "sshd" "ntpd" "chronyd")
+for svc in "${services[@]}"; do
+  if systemctl is-active --quiet "$svc" 2>/dev/null; then
+    echo "OK  $svc"
+  elif pgrep -f "$svc" > /dev/null 2>&1; then
+    echo "OK  $svc (process found, not systemd)"
+  else
+    echo "ERR $svc — NOT running"
+  fi
+done
+```
+
+### Daily Avaya Health Check Script (F1)
+
+Save as `/opt/avaya/scripts/daily_health_check.sh`, cron: `0 6 * * *`
+
+```bash
+#!/bin/bash
+LOG=/var/log/avaya/health_$(date +%Y%m%d).log
+exec >> $LOG 2>&1
+
+echo "=== Avaya Daily Health Report === $(hostname) | $(date)"
+echo "1. Uptime:"; uptime
+echo "2. CPU top:"; ps aux --sort=-%cpu | head -8
+echo "3. Memory:"; free -h
+echo "4. Disk:"; df -h
+echo "5. Large files in Avaya dirs (>100MB):"; find /var/log/avaya /opt/avaya -size +100M -ls 2>/dev/null
+echo "6. Avaya ports:"; ss -tuln | grep -E '5060|5061|1099|8443|4445|7001'
+echo "7. Java/Avaya procs:"; ps aux | grep -E '[Jj]ava|csta|weblogic|avaya' | grep -v grep
+echo "8. Recent errors (files with ERROR/EXCEPTION since yesterday):"
+find /var/log/avaya /opt/avaya -name "*.log" -newer /tmp/.last_health_check \
+     -exec grep -l "ERROR\|EXCEPTION\|FATAL" {} \; 2>/dev/null | head -10
+touch /tmp/.last_health_check
+echo "=== Done ==="
+```
+
+---
+
+## Auto-Remediation Playbooks
+
+### Disk Full → Log Rotation / Cleanup (D2)
+
+> Trigger: disk usage >85% on `/var/log` or `/opt/avaya`. Requires approval on production.
+
+```bash
+# Step 1: identify largest consumers
+du -sh /var/log/avaya/* 2>/dev/null | sort -rh | head -20
+du -sh /opt/avaya/*/logs/* 2>/dev/null | sort -rh | head -20
+du -sh /tmp/* 2>/dev/null | sort -rh | head -10
+
+# Step 2: compress logs older than 7 days
+find /var/log/avaya -name "*.log" -mtime +7 -exec gzip {} \;
+find /opt/avaya -name "*.log" -mtime +7 -exec gzip {} \;
+
+# Step 3: delete compressed logs older than 30 days
+find /var/log/avaya -name "*.gz" -mtime +30 -delete
+find /opt/avaya -name "*.gz" -mtime +30 -delete
+
+# Step 4: clean /tmp
+find /tmp -mtime +1 -delete 2>/dev/null || true
+
+# Step 5: verify
+df -h /var/log; df -h /opt/avaya
+```
+
+> Policy parameters: `cooldown_seconds: 3600` | `execution_mode: approval` | Verification: `df -h | awk '$6~"avaya"{print $5}'`
+
+### Service Crash → Auto-Restart Rule (D1)
+
+```
+Alert keywords: ["down", "stopped", "unreachable", "crash", "failed"]
+Cooldown: 300 seconds | Max restarts/hour: 3
+
+Remediation:
+  systemctl restart <service>
+  # OR for non-systemd Avaya services:
+  /opt/avaya/<service>/bin/stop.sh && sleep 10 && /opt/avaya/<service>/bin/start.sh
+
+Verification: systemctl is-active <service>  OR  nc -zv <host> <port>
+
+Safe for auto-restart: AES csta-server, ACRA recorder agent, POM outbound server
+ALWAYS require approval: CM, SMGR, WebLM, Avaya Voice Portal, AACC OAM
+```
+
+---
+
+## SNMP Monitoring
+
+### SNMP Query Patterns for Avaya Infrastructure (E2)
+
+```bash
+AVAYA_HOST="<avaya-server-ip>"
+COMMUNITY="<snmp-community>"
+
+# Basic connectivity
+snmpwalk -v2c -c $COMMUNITY $AVAYA_HOST sysDescr
+snmpwalk -v2c -c $COMMUNITY $AVAYA_HOST sysUpTime
+
+# Interface statistics
+snmpwalk -v2c -c $COMMUNITY $AVAYA_HOST ifTable
+
+# CPU / Memory (Host Resources MIB — Linux)
+snmpget -v2c -c $COMMUNITY $AVAYA_HOST hrProcessorLoad.1
+snmpwalk -v2c -c $COMMUNITY $AVAYA_HOST hrStorageSize
+
+# Avaya enterprise MIB root: .1.3.6.1.4.1.6889
+# Install Avaya MIBS package for CM-specific OIDs:
+# /usr/share/snmp/mibs/ after package install
+
+# Test SNMP trap reception (from NMS to Avaya):
+snmptrap -v2c -c $COMMUNITY <nms-ip> '' .1.3.6.1.6.3.1.1.5.3 \
+  .1.3.6.1.2.1.2.2.1.1.1 i 1
+```
+
+---
+
+## Monitoring Thresholds
+
+### Alert Threshold Definitions for Avaya Servers (F2)
+
+| Metric | Warning | Critical | Notes |
+|--------|---------|----------|-------|
+| CPU usage (%) | 70 | 90 | AES/AACC Java GC can spike briefly; don't act on single sample |
+| Memory usage (%) | 80 | 95 | AES heap OOM causes CTI failures; collect jstack before restart |
+| Disk /var/log (%) | 75 | 85 | Avaya logs grow fast; auto-rotate compresses logs >7 days |
+| Disk /opt/avaya (%) | 80 | 90 | ACRA recordings accumulate; alert L2 before cleanup |
+| Open FDs — AES (count) | 50000 | 60000 | Default ulimit 65536; AES leaks FDs under load |
+| JTAPI connections (% cap) | 80 | 95 | Monitor via AES admin web UI |
+| DB idle connections — PG | 20 | 50 | AES PostgreSQL; signals connection leak |
+| WebLogic thread pool (%) | 75 | 90 | ACRA WebLogic; monitor via admin console |
+
+**Alert keyword taxonomy for remediation matching:**
+
+```
+disk:        ["disk", "space", "full", "filesystem", "inode"]
+service:     ["down", "stopped", "unreachable", "crash", "failed", "restart"]
+certificate: ["certificate", "expir", "cert", "ssl", "tls", "trust"]
+memory:      ["memory", "heap", "OutOfMemory", "oom", "GC overhead"]
+cpu:         ["cpu", "load", "high", "utilization"]
+database:    ["connection pool", "JDBC", "exhausted", "pg_connect", "timeout"]
+```
+
+---
+
+## Command Safety Rules for Avaya Automation
+
+### Blocked / Restricted Commands (F3)
+
+Never issue these without explicit human approval on Avaya production servers:
+
+| Command | Risk | Action |
+|---------|------|--------|
+| `rm -rf /` or `rm -rf *` | Destroys OS/Avaya data | **ALWAYS blocked** |
+| `dd if=/dev/zero` or `mkfs.*` | Wipes partition | **ALWAYS blocked** |
+| `iptables -F` | Drops all SIP/JTAPI firewall rules | **ALWAYS blocked** (operator role) |
+| `ip link delete` | Kills CM/AES connectivity | **ALWAYS blocked** |
+| `kill -9 0` or `killall -9` | Kills all processes including Avaya | **ALWAYS blocked** |
+| `cat /etc/shadow` or `cat *.pem` or `cat *.key` | Credential exposure | **Warn + audit log** |
+| `systemctl stop <avaya-service>` | Stopping riskier than restart | **Always require approval** |
+| `jmap -dump ...` | Heap dump — large file + service degradation | **Always require approval** |
+| `UPDATE <table>` or `DELETE FROM <table>` | DB changes on AES/AACC | **Always require approval** |
+| `iptables -A` or `iptables -D` | Firewall changes affect SIP/JTAPI | **Always require approval** |
+
+> Auto-safe (no approval needed): `systemctl status`, `ps aux`, `df -h`, `ss -tuln`, `jstat -gcutil`, `netstat`, `grep` on log files, `top -bn1`

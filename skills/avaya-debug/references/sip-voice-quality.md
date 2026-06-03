@@ -512,3 +512,150 @@ master agent file).
 | **ACCS voice quality issue after upgrade** | Voice quality degraded after IPO and ACCS upgrade | Codec or DSP configuration changed during upgrade | Verify codec settings post-upgrade; check DSP resources and IP-network-region (per `1-19480241832`) |
 | **SIP INFO DTMF not recognized** | IVR does not respond to DTMF from SIP phones using SIP INFO | DTMF method mismatch (SIP INFO vs RFC2833) between phone and AEP | Configure matching DTMF method on phone and AEP (per `1-18702096522`) |
 | **WebRTC one-way video** | WebRTC call has voice but video only in one direction | SDP video negotiation or firewall RTP port issue | Check SDP video offer/answer; verify firewall allows RTP video ports bidirectionally (per `1-17332616732`, `1-17390788680`) |
+
+---
+
+## SIP Infrastructure Connectivity & SBC Health (IT Ops Patterns)
+
+Adapted from IT operations automation platform patterns. Applies to Session Manager,
+SBC (SBCE), and SIP trunk port verification for Avaya Aura environments.
+
+### A3 — Port Connectivity Verification for SIP Stack
+
+Network connectivity failures between SIP components are often misdiagnosed as
+SIP protocol issues. Always verify transport reachability before analyzing SIP
+signaling.
+
+```bash
+# ── Session Manager connectivity checks ──────────────────────────────────────
+
+# SIP signaling ports (run from SM host or jump server):
+nc -zv <SM_IP> 5060 && echo "SM SIP UDP/TCP reachable" || echo "BLOCKED"
+nc -zv <SM_IP> 5061 && echo "SM SIP TLS reachable"    || echo "BLOCKED"
+nc -zv <SM_IP> 8443 && echo "SM HTTPS (admin) reachable" || echo "BLOCKED"
+
+# Test from carrier/PSTN gateway toward SM:
+# (Run on the SBC or border node, not SM itself)
+nc -zv <SM_IP> 5060 -w 5
+nc -zv <SM_IP> 5061 -w 5
+
+# ── AES / CTI ports ──────────────────────────────────────────────────────────
+nc -zv <AES_IP> 1099  && echo "AES TSAPI (JTAPI) reachable" || echo "BLOCKED"
+nc -zv <AES_IP> 450   && echo "AES DMCC (unencrypted) reachable" || echo "BLOCKED"
+nc -zv <AES_IP> 4722  && echo "AES DMCC (TLS) reachable"   || echo "BLOCKED"
+nc -zv <AES_IP> 8765  && echo "AES OAM reachable"           || echo "BLOCKED"
+
+# ── Communication Manager / Gateway ──────────────────────────────────────────
+nc -zv <CM_IP> 5060   && echo "CM SIP reachable"             || echo "BLOCKED"
+nc -zv <CM_IP> 7500   && echo "CM media gateway reachable"   || echo "BLOCKED"
+
+# ── AACC / CCMM ──────────────────────────────────────────────────────────────
+nc -zv <AACC_IP> 8443 && echo "AACC HTTPS reachable"         || echo "BLOCKED"
+
+# ── Batch port scan for full SIP stack audit ────────────────────────────────
+# Save results to file for SR attachment:
+LOGFILE=/tmp/avaya_port_audit_$(date +%Y%m%d_%H%M%S).txt
+for HOST_PORT in \
+  "<SM_IP>:5060" "<SM_IP>:5061" "<SM_IP>:8443" \
+  "<AES_IP>:1099" "<AES_IP>:4722" \
+  "<CM_IP>:5060" "<SBC_IP>:5060" "<SBC_IP>:5061"; do
+  HOST="${HOST_PORT%%:*}"
+  PORT="${HOST_PORT##*:}"
+  RESULT=$(nc -zv -w 3 "$HOST" "$PORT" 2>&1)
+  echo "$(date +%H:%M:%S) $HOST:$PORT — $RESULT" | tee -a "$LOGFILE"
+done
+echo "Port audit saved to $LOGFILE"
+```
+
+**Port reference table**:
+| Component | Port | Protocol | Purpose |
+|-----------|------|----------|---------|
+| Session Manager | 5060 | TCP/UDP | SIP signaling (unencrypted) |
+| Session Manager | 5061 | TLS | SIP signaling (encrypted) |
+| Session Manager | 8443 | HTTPS | Admin UI, REST API |
+| AES | 1099 | TCP | JTAPI / TSAPI client |
+| AES | 450 | TCP | DMCC (unencrypted) |
+| AES | 4722 | TLS | DMCC (encrypted) |
+| AES | 8765 | HTTPS | OAM web console |
+| CM | 5060 | TCP/UDP | SIP trunk |
+| SBC (SBCE) | 5060/5061 | TCP/TLS | SIP edge |
+| WFO/ACRA | 3460 | TCP | RTP capture (typical) |
+
+**Firewall verification**: If `nc` is blocked on the test host itself,
+use `traceroute -T -p <PORT> <DEST_IP>` to identify where TCP RST occurs.
+Asymmetric firewall rules (outbound allowed, inbound blocked) are the most
+common cause of OPTIONS keep-alive failures (see §SIP Intermittent Disconnection).
+
+---
+
+### E1 — SBC / Router Interface Health via SNMP and sipsak
+
+SBC (Avaya SBCE) interface health must be verified at both the network layer
+(SNMP interface counters) and SIP layer (OPTIONS probing) before concluding
+a SIP trunk problem is in CM or SM configuration.
+
+```bash
+# ── SIP OPTIONS probe via sipsak ────────────────────────────────────────────
+# Install: yum install sipsak (RHEL/CentOS) or apt install sipsak (Debian)
+
+# Test SIP reachability to SBC external interface:
+sipsak -s sip:<SBC_EXT_IP> -v
+# Expected: 200 OK or 501 Not Implemented (both = SIP stack responding)
+# Failure: timeout or ICMP unreachable = Layer 3/4 problem, not SIP config
+
+# Test SIP OPTIONS to carrier SIP trunk endpoint:
+sipsak -s sip:<CARRIER_SIP_IP>:<PORT> -v -t 5000
+# If timeout: firewall or carrier ACL blocking; escalate to carrier
+
+# Test SIP OPTIONS through SBC (via internal interface toward SM):
+sipsak -s sip:<SM_IP>:5060 -H <LOCAL_SM_IP> -v
+
+# ── SNMP interface counters (SBC or upstream router) ────────────────────────
+# Check interface error counters (requires SNMP community read access):
+SNMP_COMMUNITY="public"
+SBC_IP="<SBC_IP>"
+
+# Interface index discovery:
+snmpwalk -v2c -c "$SNMP_COMMUNITY" "$SBC_IP" IF-MIB::ifDescr \
+  | grep -iE "eth|ge|wan|sip"
+
+# Packet error rates on SBC WAN interface (replace .3 with correct ifIndex):
+snmpget -v2c -c "$SNMP_COMMUNITY" "$SBC_IP" \
+  IF-MIB::ifInErrors.3 \
+  IF-MIB::ifOutErrors.3 \
+  IF-MIB::ifInDiscards.3 \
+  IF-MIB::ifOutDiscards.3
+
+# Avaya SBCE enterprise MIB — SIP session stats:
+snmpwalk -v2c -c "$SNMP_COMMUNITY" "$SBC_IP" .1.3.6.1.4.1.6889.2.71
+# .6889.2.71 = Avaya SBCE MIB subtree (session, signaling, media stats)
+
+# ── SBCE CLI interface health (SSH to SBCE) ──────────────────────────────────
+# show sipd endpoint-ip (active SIP registrations / dialogs)
+# show interfaces (network interface RX/TX counters)
+# show sip-statistics (200/4xx/5xx response counts per trunk)
+# show alarm (active hardware and application alarms)
+
+# ── Continuous monitoring loop (5-min interval) ─────────────────────────────
+while true; do
+  echo "=== $(date) ==="
+  sipsak -s sip:<SBC_EXT_IP> -v 2>&1 | grep -E "200|501|timeout|error"
+  snmpget -v2c -c "$SNMP_COMMUNITY" "$SBC_IP" \
+    IF-MIB::ifInErrors.3 IF-MIB::ifOutErrors.3 2>/dev/null
+  sleep 300
+done
+```
+
+**SBC health decision matrix**:
+| sipsak result | SNMP errors | Interpretation | Action |
+|---------------|-------------|----------------|--------|
+| 200/501 OK | Low (<5/min) | SBC healthy | Look at SM/CM config |
+| Timeout | Low | SBC SIP stack down | Restart SBCE SIP process |
+| Timeout | High | Network/interface fault | Check upstream router, cabling |
+| 200/501 OK | High | Interface degraded | Check MTU, duplex, cable; escalate to network team |
+| 5xx SIP error | Any | SBC config issue | Check SBC routing policy, entity links |
+
+**Key invariant**: OPTIONS keep-alive failures (L-001 in `lessons/sip-voice-quality.md`)
+frequently appear as SNMP interface errors on the WAN-side SBC interface when
+the carrier firewall blocks inbound OPTIONS. Correlate sipsak timeout WITH
+outbound OPTIONS counter increasing in SBC stats — asymmetric drop is diagnostic.
