@@ -1,4 +1,13 @@
 # Certificates / WebLM / Login / Outage Recovery Reference
+<!--
+scope: Certificate lifecycle, WebLM, EPM/SMGR login, outage recovery, JKS trust store
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: keytool flag syntax across JDK versions, Avaya WebLM license server URLs, cert SAN requirements
+related_docs: diagnostic-principles.md (invariant 8), linux-server.md, lessons/certificates-login-outage.md
+-->
+
+
 
 ## Table of Contents
 - [Certificates / WebLM Trust-Store Ecosystem](#certificates--weblm-trust-store-ecosystem)

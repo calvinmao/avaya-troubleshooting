@@ -1,4 +1,13 @@
 # Avaya Digital Channels Troubleshooting
+<!--
+scope: Email/Social channels, ESL/Infinity, CCMM, WeChat/WhatsApp/SMS, CRM connectors, screen-pop
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: Social media API versions, WeChat/WhatsApp Business API changes, ESL webhook formats
+related_docs: orchestration-integration.md, lessons/digital-channels.md
+-->
+
+
 
 Reference for Email, Social, Infinity, ESL, and CRM connector failures across the Avaya digital/async stack. Pulled from `avaya-debugger.md` §1.9, §1.11, §4.10–§4.13, and §5.8.
 

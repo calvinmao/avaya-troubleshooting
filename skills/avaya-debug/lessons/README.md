@@ -6,6 +6,7 @@ This directory accumulates evidence-anchored findings from real SR cases. Each f
 
 | File | Mirrors |
 |------|---------|
+| `diagnostic-principles.md` | `../references/diagnostic-principles.md` |
 | `aes-cti-jtapi.md` | `../references/aes-cti-jtapi.md` |
 | `contact-center.md` | `../references/contact-center.md` |
 | `recording-wfo.md` | `../references/recording-wfo.md` |

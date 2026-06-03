@@ -1,4 +1,13 @@
 # Avaya IP Office Troubleshooting
+<!--
+scope: IP Office (IPO), SSA, SysMonitor, IP Office Manager, ACCS+IPO, SIP trunk registration
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: IP Office release-specific menu paths, SSA version behavior, ACCS+IPO integration notes
+related_docs: sip-voice-quality.md, diagnostic-principles.md, lessons/ip-office.md
+-->
+
+
 
 ## Why IP Office Is Different
 

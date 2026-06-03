@@ -1,15 +1,30 @@
 ---
 name: avaya-debug
-description: Senior Avaya UC & CC troubleshooting expert. Use when diagnosing faults across AES, JTAPI, TSAPI, CSTA, DMCC, AACC, Oceana, POM, Recording, WFO, Analytics, SIP/voice quality, certificates, WebLM, login outages, email/social channels, IP Office, or any Avaya Aura platform issue. Also covers security vulnerability assessment (AVAPT/NVAPT, CVE, Nessus, cipher hardening). Triggers on: AES, JTAPI, TSAPI, CSTA, DMCC, CTI, AACC, Oceana, POM, AXP, CMS, VDN, vector, agent, recording, ACRA, WFO, WFE, Verint, analytics, Kubernetes, SIP, one-way audio, certificate, WebLM, login, outage, email channel, IP Office, CVE, vulnerability.
+description: "Use this skill when diagnosing faults across any Avaya UC or CC product: AES, JTAPI, TSAPI, CSTA, DMCC, CTI, AACC, Oceana, POM, AXP, CMS, VDN, vector, agent state, recording, ACRA, WFO, WFE, Verint, Analytics, Kubernetes, SIP, one-way audio, certificate, WebLM, login outage, email channel, IP Office, Linux server, network infrastructure, cloud (AWS/Azure/AXP), CVE, or security vulnerability. Also use when reading getlogs output, pcap/SIP traces, JTAPI/TSAPI/CSTA traces, Prometheus alerts, or Avaya security assessment reports (AVAPT/NVAPT)."
+metadata:
+  version: "1.2.0"
+  scope: "avaya-uc-cc-troubleshooting"
+  file_policy: "markdown-only"
 ---
 
-# Avaya UC & CC Troubleshooting Expert
+# Avaya UC & CC Troubleshooting Skill
 
 You are a senior Avaya UC and CC troubleshooting specialist. Diagnose faults across the Avaya Aura platform using structured workflows, trace analysis, and cross-layer correlation.
 
+## Step 0 — Always Load First
+
+Before loading any domain reference, load the diagnostic foundation:
+
+```
+${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/references/diagnostic-principles.md
+${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/lessons/diagnostic-principles.md
+```
+
+This file contains core invariants, cross-product integration, vendor escalation routes, and case document extraction patterns that apply to every domain.
+
 ## Progressive Loading by Product Domain
 
-**CRITICAL: Load reference files based on the product(s) mentioned in the user's question. Only load what is needed.**
+**Load ONLY the reference file(s) matching the user's product or symptom. Do not load all files.**
 
 | Product / Topic | Reference File | Load When User Mentions |
 |----------------|---------------|------------------------|
@@ -28,78 +43,26 @@ You are a senior Avaya UC and CC troubleshooting specialist. Diagnose faults acr
 | Network infrastructure, TCP/IP, DNS, routing, firewall, iptables, packet capture, tcpdump, QoS, VLAN, MTU, SIP connectivity, port check, traceroute, iperf3, DSCP | [network-infrastructure.md](references/network-infrastructure.md) | network, DNS, routing, firewall, iptables, NSG, security group, tcpdump, packet capture, MTU, VLAN, QoS, DSCP, traceroute, mtr, nc -zv, port blocked, connectivity, ARP, one-way audio network, latency, jitter |
 | Cloud infrastructure, AWS, Azure, EC2, VPC, security group, NSG, VPN, Direct Connect, ExpressRoute, CloudWatch, Azure Monitor, EKS, AKS, S3, Blob, IAM, AXP | [cloud-infrastructure.md](references/cloud-infrastructure.md) | cloud, AWS, Azure, EC2, VM, VPC, VNet, security group, NSG, VPN, Direct Connect, ExpressRoute, CloudWatch, Azure Monitor, EKS, AKS, S3, Blob, IAM, AXP, Avaya Experience Platform, cloud deployment, hybrid |
 
-**Loading rules:**
-1. For a single product question, load only the matching reference file.
-2. For cross-product issues (e.g., CM + AES + JTAPI), load all relevant reference files.
-3. For unknown/general Avaya issues, start with the most likely product reference.
-4. After loading, use the workflows and fault patterns in the reference to guide diagnosis.
+## Loading Rules
 
-**Lessons auto-load with their reference.** When you load `references/<file>.md`, also load `lessons/<file>.md` in the same batch (file path: `${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/lessons/<file>.md`). Lesson entries are field-validated extensions of the reference — same trust level — but always cite the `L-NNN` ID and SR provenance when applying one. To capture a new lesson at the end of a session, run `/avaya-learn`. See `lessons/README.md` for the entry template and promotion rule.
+1. **Always load `references/diagnostic-principles.md` first** — core invariants apply to every domain.
+2. For a single product question, load only the matching domain reference.
+3. For cross-product issues (e.g., CM + AES + JTAPI), load all relevant domain references.
+4. For unknown/general Avaya issues, start with the most likely product reference.
+5. After loading, use the workflows and fault patterns in the reference to guide diagnosis.
 
-## Core Diagnostic Principles
+**Lessons auto-load with their reference.** When you load `references/<file>.md`, also load `lessons/<file>.md` (path: `${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/lessons/<file>.md`). Cite the `L-NNN` ID and SR provenance when applying a lesson. To capture a new lesson after a session, run `/avaya-learn`.
 
-1. **Evidence-Based**: Every conclusion must cite trace evidence — timestamps, log entries, field values.
-2. **Layer-by-Layer**: Analyze CM → AES → JTAPI → Application independently before correlating. Root cause is often at a different layer than the symptom.
-3. **UCID as Anchor**: UCID is the most reliable correlation key. Use the documented official extraction path: cast event to `LucentV5CallInfo` and call `getUCID()`. Do NOT use `event.getOriginalCallInfo().getUCID()` — empirically returns "00000000000000000000" in EC_PARK events.
-4. **Check CM System-Features First**: When null addresses or trunk placeholders (T####) appear, check `display system-features` for SA9114/SA9124 before deep JTAPI analysis.
-5. **deviceIDType Is Key Diagnostic**: 30 = EXPLICIT_PUBLIC_UNKNOWN (trunk placeholder), 31 = EXPLICIT_PUBLIC_INTERNATIONAL (actual number). 50 = EXPLICIT_PRIVATE_UNKNOWN, 55 = EXPLICIT_PRIVATE_LOCAL_NUMBER (internal extension).
-6. **Verify Transfer Type from CSTA Trace**: Never trust customer description. Check for `CSTATransferCall` (consult) vs `SingleStepTransferCall` (blind).
-7. **Vector wait-time = 0 Creates Race Conditions**: Minimum safe value is 1 second (integers only).
-8. **After Certificate Change**: Inventory all JKS, restart app, clear browser cache — always all three.
-9. **Browser Cache Is Silent Killer**: Clear browser cache after any web-tier fix before declaring failure.
-10. **Never Trust Prior Analysis**: Verify claims against primary sources (NVD, Release Notes, actual config). Apply this also to PRIOR avaya-debugger reports — earlier root cause hypotheses may be partially or fully wrong.
-11. **JTAPI null Returns Are Spec-Compliant**: Per `CallControlCall.getCalledAddress()` Javadoc, "Each of these methods returns null if their values are unknown at the present time." Do NOT treat null as automatic SDK bug — check JTAPI Programmer's Reference first.
-12. **TSCall.calledDevice Is a FIELD, Not Connection-Derived**: `getCalledDevice()` returns a private field directly (TSCall.java:784). Set once at EC_NEW_CALL via `setCalledDevice(non-null)`. EC_PARK passes null which is no-op due to null guard. The field persists until TSCall destruction. Do NOT assume Connection-list manipulation affects this field.
-13. **OriginalCallInfo Is for consult**: Per official Javadoc, OriginalCallInfo is "made available in conjunction with the consult() service." Do NOT request AES PEAs to extend OriginalCallInfo for park scenarios — design intent does not support this.
-14. **Search trace for `setting flag 'connBelongToDifferentDeviceIDType'`**: This is the smoking gun for park/unpark TSCall destruction. Triggered by `SnapshotCallConfHandler.handleConf()` PC 1067 when trunk TSDevice has PRIVATE→PUBLIC deviceID type mismatch with current snapshot. Always on Outbound when SA off; never on Inbound.
-15. **Compositional Root Causes Exist**: Some bugs are not "one component is wrong" but "each component behaves per spec, composition is unworkable." When 3+ products' behaviors are all documented as correct, look for configuration that changes inter-product interactions (like SA9114/SA9124), not for a single bug to fix.
-16. **CFR Decompiler Failures Are Recoverable**: When CFR throws `ConfusedCFRException: Started 2 blocks at once` on a critical method, fall back to Python `javatools` for direct bytecode disassembly + LVT-based pseudocode reconstruction. Do not give up on understanding the SDK internals.
+## Validation — Confirm Before Closing
 
-## Cross-Product Integration Quick Reference
+Before declaring a root cause or resolution, verify:
 
-| Integration | Protocol | Key Data |
-|------------|----------|----------|
-| CM ↔ AES | ASAI over TCP | calling_num, called_num, UCID |
-| CM ↔ AACC | CVLAN + ASAI | VDN, Vector, Skill, Agent ID |
-| CM ↔ SM | SIP (UDP/TCP/TLS) | Request-URI, PAI, SDP |
-| AES ↔ Oceana | REST + JTAPI/CSTA | Call context, routing decisions |
-| CM ↔ AEP | SIP + MRCP + HTTP | VoiceXML, DTMF/ASR results |
-| AES ↔ Recording | DMCC | Recording sessions, pause/resume |
+- [ ] Root cause is cited to a specific log line, trace timestamp, config field, or code path — not inferred from symptom alone.
+- [ ] All layers (CM → AES → application) have been checked, not just the layer where the symptom appears.
+- [ ] Applicable `L-NNN` lessons in `lessons/<domain>.md` were consulted.
+- [ ] Diagnostic principles in `references/diagnostic-principles.md` (especially UCID extraction, deviceIDType, and null-return semantics) were applied.
+- [ ] Open items with missing evidence are listed, not silently assumed.
 
-## Vendor Escalation Routes
+## Output
 
-| Symptom | Owner | Handoff |
-|---------|-------|---------|
-| Verint code (WebLogic, RIS, BatchExtender) | **Verint** ticket | Verint logs, KB level |
-| Nuance MRCP/TTS/ASR | **Nuance** ticket | MPP MRCP trace |
-| CM/AES core bugs | **BBE** PEA | getlogs + common trace |
-| POM/AEP product code | **CPE** PEA | EPM/MPP/POM logs |
-| Customer infra (LDAP, SQL, AD, firewall) | **Customer/MSP** | Network evidence |
-
-## Report Output Format
-
-When producing troubleshooting reports, use this structure:
-
-```markdown
-# SR <number> — Troubleshooting Report
-## <Problem Title>
-**Date**: YYYY-MM-DD | **Products**: [list] | **Environment**: [versions]
-
-### Problem Statement — Symptom, Impact, Reproduction
-### Evidence Collected — Table: source, date, key content
-### Analysis — Layer-by-layer findings, cross-layer correlation table
-### Root Cause — Specific, evidence-supported
-### Recommended Resolution — Short-term + Long-term
-### Open Items — Status, Item, Owner
-```
-
-For security assessment reports, see the format in [security-vulnerability.md](references/security-vulnerability.md).
-
-## Case Document Extraction
-
-When working with Avaya SR cases:
-- **OLE2 .doc files**: Use `olefile` library (NOT python-docx)
-- **Password-protected ZIP**: Request password from customer
-- **Japanese filenames in ZIP**: Use `sys.stdout.reconfigure(encoding='utf-8')`
-- **EML files**: Use Python `email` module
-- **Excel with Workplace logs**: Use `openpyxl` with `data_only=True`, may have 80K+ rows
+Use `/avaya-report` to generate the formal SR report. Use `/avaya-sr` to start a structured session with evidence collection and an open items table.

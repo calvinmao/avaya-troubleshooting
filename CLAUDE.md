@@ -6,6 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Claude Code plugin providing senior Avaya UC & CC troubleshooting expertise. It contains no runnable code — all components are Markdown files interpreted by the Claude Code plugin system.
 
+## Design Alignment
+
+This plugin is designed against the [agents-best-practices](https://github.com/DenisSergeevitch/agents-best-practices) engineering guide. Key principles applied:
+
+- **SKILL.md is a routing map, not an encyclopedia** — detailed invariants live in `references/diagnostic-principles.md`
+- **Progressive disclosure** — only the matching domain reference is loaded per session
+- **Lessons feedback loop** — `/avaya-learn` captures field findings; `/avaya-report` nudges capture post-session
+- **Evals for skill quality** — `evals/` contains activation and output-quality test cases
+- **Metadata on every reference** — `scope`, `last_reviewed`, `staleness_risks` header in each `references/*.md`
+- **Entropy/GC workflow** — see "Knowledge Base Maintenance" below
+
 ## Installation & Reload
 
 ```bash
@@ -22,9 +33,30 @@ A Claude Code plugin providing senior Avaya UC & CC troubleshooting expertise. I
   plugin.json          # Plugin identity (name, version, author)
   marketplace.json     # Local marketplace registration pointing to ./
 skills/avaya-debug/
-  SKILL.md             # Main skill — triggers + diagnostic principles
+  SKILL.md             # Routing map — triggers + progressive loading table (lean)
   references/          # Domain reference files (loaded on demand)
+    diagnostic-principles.md  # Always-loaded: core invariants, cross-product, vendor escalation
+    aes-cti-jtapi.md           # AES, JTAPI, TSAPI, CSTA, DMCC
+    contact-center.md          # AACC, Oceana, POM, CMS, VDN, vector
+    recording-wfo.md           # ACRA, WFO/WFE, Verint, WebLogic
+    analytics-kubernetes.md    # Oceanalytics, K8s, bosh, Kafka
+    security-vulnerability.md  # AVAPT/NVAPT, CVE, cipher hardening
+    sip-voice-quality.md       # SIP, RTP, on-box capture tools
+    certificates-login-outage.md  # Cert, WebLM, EPM outage, SMGR
+    digital-channels.md        # Email/Social, ESL, CCMM
+    ip-office.md               # IPO, SSA, SysMonitor
+    log-collection.md          # getlogs, trace enables, health checks
+    orchestration-integration.md  # POM + Oceana, callback, Workspace
+    linux-server.md            # Linux OS health, systemd, kernel, OOM
+    network-infrastructure.md  # TCP/IP, DNS, firewall, QoS, MTU
+    cloud-infrastructure.md    # AWS, Azure, EKS/AKS, AXP
   lessons/             # Field-captured findings, mirrors references/ 1:1
+    README.md          # L-NNN convention, promotion rules
+    diagnostic-principles.md  # Cross-domain invariant lessons
+    <domain>.md        # One file per reference domain
+evals/
+  activation.md        # Should-trigger / should-not-trigger / near-miss cases
+  output-quality.md    # Output quality rubric (6 criteria, 0-3 scoring) + 6 test cases
 commands/
   avaya-sr.md          # /avaya-sr — start SR troubleshooting session
   avaya-report.md      # /avaya-report — generate formal SR report
@@ -36,14 +68,17 @@ agents/
 
 ## Architecture: Progressive Reference Loading
 
-The core design pattern is **load-on-demand**: `SKILL.md` contains a routing table that maps trigger keywords → reference files. When the skill activates, it reads ONLY the reference file(s) matching the user's product/symptom. This keeps context lean.
+The core design pattern is **load-on-demand**: `SKILL.md` contains a routing table that maps trigger keywords → reference files. When the skill activates:
+1. Always loads `references/diagnostic-principles.md` first (core invariants, always applicable)
+2. Reads ONLY the domain reference file(s) matching the user's product/symptom
 
-Each reference file is self-contained for its domain. Commands reference them via `${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/references/<file>.md`.
+Each reference file is self-contained for its domain. The metadata block at the top of each reference file records `scope`, `last_reviewed`, `staleness_risks`, and `related_docs` for maintenance purposes.
 
 ### Reference file → domain mapping
 
 | File | Domain |
 |------|--------|
+| `diagnostic-principles.md` | **Always loaded** — core invariants, cross-product integration, vendor escalation, case doc extraction |
 | `aes-cti-jtapi.md` | AES, JTAPI, TSAPI, CSTA, DMCC, park/unpark |
 | `contact-center.md` | AACC, Oceana, POM, CMS, VDN, vector, agent state, agent login |
 | `recording-wfo.md` | ACRA, WFO/WFE, Verint, WebLogic, RIS, pause/resume, recording loss |
@@ -53,8 +88,8 @@ Each reference file is self-contained for its domain. Commands reference them vi
 | `certificates-login-outage.md` | Certificate, WebLM, EPM outage, SMGR |
 | `digital-channels.md` | Email/Social, ESL, Infinity, CCMM, WeChat |
 | `ip-office.md` | IP Office, SSA, SysMonitor, ACCS+IPO |
-| `log-collection.md` | getlogs, trace enables, tcpdump, log levels |
-| `orchestration-integration.md` | POM + Oceana, callback delivery, CCMM, Workspace, async channels, cross-product orchestration |
+| `log-collection.md` | getlogs, trace enables, tcpdump, log levels, health checks |
+| `orchestration-integration.md` | POM + Oceana, callback delivery, CCMM, Workspace, async channels |
 | `linux-server.md` | Linux OS health, systemd, CPU/memory/disk, kernel, sysctl, SELinux, journalctl, OOM |
 | `network-infrastructure.md` | TCP/IP, DNS, routing, firewall, packet capture, QoS, VLAN, MTU, iperf3, tcpdump |
 | `cloud-infrastructure.md` | AWS, Azure, EC2/VM, VPC/VNet, NSG/SG, VPN, CloudWatch, EKS/AKS, S3/Blob, AXP |
@@ -62,9 +97,11 @@ Each reference file is self-contained for its domain. Commands reference them vi
 ## Extending the Plugin
 
 ### Add a new reference domain
-1. Create `skills/avaya-debug/references/<new-domain>.md`
-2. Add a row to the progressive loading table in `SKILL.md` with trigger keywords
-3. Add the same mapping entry in `agents/avaya-debugger.md` if subagent coverage is needed
+1. Create `skills/avaya-debug/references/<new-domain>.md` — include the metadata header block
+2. Create `skills/avaya-debug/lessons/<new-domain>.md` — stub file with domain description
+3. Add a row to the progressive loading table in `SKILL.md` with trigger keywords
+4. Add `<new-domain>.md` row to `lessons/README.md`
+5. Add the same mapping entry in `agents/avaya-debugger.md` if subagent coverage is needed
 
 ### Add a new command
 Create `commands/<command-name>.md` with frontmatter:
@@ -75,6 +112,9 @@ argument-hint: "[optional arg hint]"
 ---
 ```
 
+### Add evals for a new domain
+Append a `### Should-Trigger Cases` block to `evals/activation.md` and a `### OQ-NNN` block to `evals/output-quality.md`. Run both files against the agent before shipping new domains.
+
 ## Learning Loop
 
 The plugin grows from real cases through a two-tier capture flow:
@@ -83,6 +123,22 @@ The plugin grows from real cases through a two-tier capture flow:
 2. **Promote** — If a lesson meets the promotion rule in `skills/avaya-debug/lessons/README.md` — reproduced across ≥2 SR cases OR identifies a generalizable code path / trace string / config flag — `/avaya-learn` proposes a concrete edit to the canonical `references/<domain>.md`. On approval the edit is applied and the lesson's `Promotion:` line is updated with the target anchor and date.
 
 Lessons auto-load whenever their matching reference loads, so accumulated field knowledge is always available the moment the right domain activates. When an `L-NNN` ID appears in a report or analysis, find it under `skills/avaya-debug/lessons/` — the `Provenance:` line gives the source SR for verification.
+
+## Knowledge Base Maintenance (Entropy / GC)
+
+Run periodically (suggested: quarterly, or after 10+ new lessons):
+
+```
+1. Scan lessons/ for L-NNN entries with Promotion: pending — propose promotion if ≥2 SRs
+2. Check each reference file's last_reviewed date — flag files not reviewed in >6 months
+3. Scan for duplicate or near-duplicate invariants across references/
+4. Remove or merge lesson entries that have been promoted (keep Promotion: line as audit trail)
+5. Update evals/activation.md with any new product triggers added in SKILL.md
+6. Update evals/output-quality.md with OQ-NNN entries from production incidents
+7. Review staleness_risks metadata in each reference — update version-specific content
+```
+
+Per the agents-best-practices guide: *"Repeated failures should become tools, validators, docs, evals, or policies rather than repeated prompt advice."* When a diagnostic error recurs, add an OQ-NNN eval case, not just a SKILL.md reminder.
 
 ## IT Ops Maintenance Patterns
 
@@ -110,6 +166,9 @@ from IT operations automation best practices. These apply to all Avaya Linux-bas
 | WFO SQL Server / Oracle JDBC connection health | `recording-wfo.md` | C3 — WFO SQL Server Connection Health |
 | SIP stack port connectivity verification | `sip-voice-quality.md` | A3 — Port Connectivity Verification |
 | SBC/router SNMP + sipsak OPTIONS health check | `sip-voice-quality.md` | E1 — SBC / Router Interface Health |
+| Prometheus node-exporter alert rules (Linux) | `linux-server.md` | Prometheus Alert Rules — Node Exporter |
+| Prometheus kube-state-metrics alert rules (K8s) | `analytics-kubernetes.md` | Prometheus Alert Rules — Kubernetes |
+| Prometheus JVM exporter alert rules (AES/WFO) | `aes-cti-jtapi.md` | Prometheus Alert Rules — JVM Exporter |
 
 ### Auto-remediation safety invariants
 
@@ -130,7 +189,7 @@ reference files above and must be preserved when adding new playbooks:
 
 ## Key Diagnostic Invariants (Do Not Change Without Evidence)
 
-These are empirically validated facts encoded in `SKILL.md` and the agent:
+These are empirically validated facts. Full details in `references/diagnostic-principles.md`.
 
 - **UCID extraction**: Always `cast event to LucentV5CallInfo` → `getUCID()`. Never `event.getOriginalCallInfo().getUCID()` — returns all-zeros on EC_PARK events.
 - **deviceIDType 30** = trunk placeholder (EXPLICIT_PUBLIC_UNKNOWN); **31** = actual PSTN number.

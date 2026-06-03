@@ -1,4 +1,13 @@
 # Contact Center (AACC / Oceana / AEP / POM / AXP / CMS / WFM) Troubleshooting Reference
+<!--
+scope: AACC, Oceana, POM, AXP, CMS, VDN, vector routing, agent state machine
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: AACC version-specific menu paths, Oceana API endpoints, POM log file locations
+related_docs: diagnostic-principles.md, orchestration-integration.md, lessons/contact-center.md
+-->
+
+
 
 ## Table of Contents
 - [Contact Center Products](#contact-center-products)

@@ -1,4 +1,13 @@
 # Linux Server Troubleshooting Reference
+<!--
+scope: Linux OS health on Avaya servers (AES, SM, AACC, ACRA, EPM), systemd, kernel, sysctl, OOM, SELinux
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: RHEL/CentOS version-specific sysctl keys, systemd unit names per product version, Prometheus node-exporter metric names
+related_docs: log-collection.md, network-infrastructure.md, lessons/linux-server.md
+-->
+
+
 
 Diagnostic patterns for Linux-based Avaya servers (AES, Session Manager, AACC, ACRA,
 EPM, SMGR, POM, CCMM). All Avaya Aura components run on RHEL/CentOS 7/8/9 unless

@@ -1,4 +1,13 @@
 # SIP / Voice Quality / Codec Troubleshooting Reference
+<!--
+scope: SIP signaling, RTP/SRTP, voice quality, SBC, codec, QoS, on-box capture tools (sngrep/tshark/ngrep)
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: sngrep EPEL package availability per RHEL version, tshark dissector flags, SBC vendor MIBs
+related_docs: network-infrastructure.md, diagnostic-principles.md, lessons/sip-voice-quality.md
+-->
+
+
 
 Reference for Avaya Aura SIP signaling, RTP/voice quality, codec negotiation,
 Session Manager trace, SIP trunk registration, SBC, and QoS troubleshooting.

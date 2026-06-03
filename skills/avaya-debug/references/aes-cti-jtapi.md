@@ -1,4 +1,13 @@
 # AES / CTI / JTAPI Troubleshooting Reference
+<!--
+scope: AES, JTAPI, TSAPI, CSTA, DMCC, CTI, park/unpark, TSCall lifecycle
+last_reviewed: 2026-06-03
+owner: avaya-debug skill
+staleness_risks: AES version-specific TSCall.java line numbers, PostgreSQL version, Java heap defaults
+related_docs: diagnostic-principles.md (invariants 3-16), lessons/aes-cti-jtapi.md
+-->
+
+
 
 ## Table of Contents
 - [AES Product Knowledge](#aes-product-knowledge)
