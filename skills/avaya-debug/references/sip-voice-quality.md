@@ -1,9 +1,9 @@
 # SIP / Voice Quality / Codec Troubleshooting Reference
 <!--
 scope: SIP signaling, RTP/SRTP, voice quality, SBC, codec, QoS, on-box capture tools (sngrep/tshark/ngrep)
-last_reviewed: 2026-06-03
+last_reviewed: 2026-06-04
 owner: avaya-debug skill
-staleness_risks: sngrep EPEL package availability per RHEL version, tshark dissector flags, SBC vendor MIBs
+staleness_risks: sngrep EPEL package availability per RHEL version, tshark SRTP/DTLS dissector flags (Wireshark >= 3.0 required for srtp.enc_payload), SBC vendor MIBs, rtpevent field names across Wireshark versions
 related_docs: network-infrastructure.md, diagnostic-principles.md, lessons/sip-voice-quality.md
 -->
 
@@ -24,6 +24,12 @@ Session Manager trace, SIP trunk registration, SBC, and QoS troubleshooting.
 - [CM ↔ SM Integration (§5.3)](#cm--sm-integration)
 - [SIP / Voice Fault Patterns](#sip--voice-fault-patterns)
 - [Historical SIP / Voice Fault Patterns](#historical-sip--voice-fault-patterns)
+- [Advanced PCAP Diagnostic Patterns](#advanced-pcap-diagnostic-patterns)
+  - [SIP INVITE Field Inspection Guide](#sip-invite-field-inspection-guide)
+  - [Symptom → PCAP Diagnostic Map](#symptom---pcap-diagnostic-map)
+  - [SRTP / Encrypted Media Analysis](#srtp--encrypted-media-analysis)
+  - [DTMF Three-Path Analysis](#dtmf-three-path-analysis)
+  - [Key Trace Analysis Principles](#key-trace-analysis-principles-field-validated)
 
 ---
 
@@ -911,3 +917,216 @@ tshark -r capture.pcap -Y 'rtp.p_type == 101' | wc -l
 # Zero RTP p_type=101 packets despite SDP negotiation
 # -> Media bypasses AEP (direct-media / hairpinning); check CM direct-media setting
 ```
+
+
+---
+
+## Advanced PCAP Diagnostic Patterns
+
+Evidence-anchored techniques for diagnosing SIP/RTP issues directly from packet captures.
+Sources: SharkFest EU 2025 (SIP/SRTP trace analysis), field pcap tooling best practices.
+
+---
+
+### SIP INVITE Field Inspection Guide
+
+When a call has issues, inspect these six fields in the INVITE and 200 OK:
+
+| Field | Location | What to Check | Common Problem |
+|-------|----------|---------------|----------------|
+| `Request-URI` | First line: `INVITE sip:+12125551234@provider.com SIP/2.0` | Number format, domain, transport | Wrong number format (missing +, wrong country code) |
+| `From` / `To` | Headers | URI format, tag in 200 OK | Missing From-tag causes 400 Bad Request |
+| `Call-ID` | `Call-ID: abc123@10.1.1.1` | Unique per dialog; correlate across hops | Duplicate Call-IDs = loop or fork |
+| SDP `m=audio` | Body: `m=audio 20000 RTP/AVP 0 8 101` | Port != 0; codec list includes both sides' supported types | Port 0 = media rejected; missing 101 = no RFC 2833 DTMF |
+| SDP `a=rtpmap` | Body: `a=rtpmap:0 PCMU/8000` | Payload-type number matches `m=audio` codec list | Mismatched payload type -> wrong codec decoded |
+| SDP `c=` line | Body: `c=IN IP4 10.1.2.3` | IP reachable from remote endpoint; not 0.0.0.0 | 0.0.0.0 or private IP behind NAT -> one-way or no audio |
+
+**Quick check sequence:**
+1. Filter: `sip.Method == "INVITE"` — inspect SDP offer
+2. Filter: `sip.Status-Code == 200` — inspect SDP answer; compare codec + `c=` address
+3. If `c=` address differs between offer and answer: NAT traversal problem
+4. If 200 OK has `m=audio 0` (port zero): remote explicitly rejected media
+
+---
+
+### Symptom -> PCAP Diagnostic Map
+
+| Symptom | First PCAP Check | Filter | Expected vs. Observed |
+|---------|-----------------|--------|----------------------|
+| One-way audio (agent hears, caller does not) | `c=` IP in SDP answer | `sip.Status-Code == 200` inspect body | SDP answer `c=` must be reachable from caller RTP sender |
+| No audio in either direction | RTP packets present? | `rtp and ip.addr == <media_IP>` | Zero RTP packets = media path not established; check SDP port != 0 |
+| DTMF not recognized at IVR | `telephone-event` in SDP | `sip.Method == "INVITE"` SDP body | `a=rtpmap:101 telephone-event/8000` must appear; if absent, RFC 2833 not negotiated |
+| DTMF in SDP but IVR still misses digits | RTP type 101 packets arriving? | `rtp.p_type == 101` | Zero packets despite SDP negotiation = direct-media bypasses AEP; check CM ip-network-region direct-media |
+| Choppy audio / gaps | RTP jitter + loss | `tshark -q -z rtp,streams` | Jitter >30 ms or loss >1% = network QoS issue; correlate with DSCP markings |
+| Call drops after ~30 sec | re-INVITE exchange | `sip.CSeq.method == "INVITE"` (second instance) | Missing 200 OK/ACK to re-INVITE = codec or timing fault |
+| Call drops at N-minute mark | OPTIONS keep-alive flow | `sip.Method == "OPTIONS"` responses | No 200 OK after OPTIONS = CGNAT or firewall timeout |
+| Codec mismatch (488) | SDP offer vs answer codec sets | `sip.Status-Code == 488` | Empty intersection between INVITE `m=audio` and 200 OK `m=audio` |
+| Auth failure (401/403) | Auth header presence | `sip.Status-Code == 401` -> `WWW-Authenticate` | Check realm, algorithm (MD5), and credentials match provider |
+| 408 Request Timeout | INVITE reaches destination? | `ip.dst == <dest> and sip.Method == "INVITE"` | No matching packet = firewall dropping; confirm with `nc -zv <dest> 5060` |
+| 486 Busy Here (unexpected) | Agent state in AACC | `sip.Status-Code == 486` | If agent not on call: check AACC Aux state (see `contact-center.md`) |
+| 500/503 from provider | Provider response body | `sip.Status-Code >= 500` | Provider internal error; if persistent, escalate to carrier |
+
+---
+
+### SRTP / Encrypted Media Analysis
+
+For environments using SRTP (Avaya recommends SRTP for all trunk-side encryption),
+decryption is **not required** to diagnose most RTP quality issues. Transport-layer
+metrics (jitter, loss, delta, sequence gaps) are available in the outer UDP/IP header
+and remain visible even when the payload is encrypted.
+
+**Key principle (SharkFest EU 2025):** *Differentiate failed signaling from failed audio
+stream.* These are independent failure modes -- a call can have perfect SIP signaling and
+still have no audio if SRTP keys are not exchanged correctly.
+
+#### SRTP Display Filters
+
+```
+# SRTP payload (outer UDP/IP header visible even when payload is encrypted):
+srtp                                     All SRTP packets (Wireshark >= 3.0)
+srtp.enc_payload                          Filter where encrypted payload field is present
+
+# DTLS-SRTP key exchange (WebRTC or modern SIP with DTLS):
+rtp.setup-method == "DTLS-SRTP"          Frames associated with DTLS-SRTP session setup
+
+# SDES key exchange detection (traditional SIP SRTP via SDP a=crypto):
+sdp.media contains "RTP/SAVP"            SRTP-capable media line (Secure AV Profile)
+sdp.session_attribute contains "crypto"  SDP a=crypto key offer/answer
+
+# SDP connection address (find media IP across call legs):
+sdp.connection_info                      SDP c= line value
+sdp.connection_info == "IN IP4 10.1.2.3" Isolate calls from specific media endpoint IP
+
+# SDP media line (codec + security profile):
+sdp.media                                All SDP m= lines
+sdp.media contains "RTP/SAVP"            SRTP-encrypted streams
+sdp.media contains "RTP/AVP"             Unencrypted RTP streams (for comparison)
+```
+
+#### SRTP Diagnostic Workflow
+
+```
+Step 1 -- Confirm SRTP negotiation in SDP (no decryption needed):
+  tshark -r capture.pcap -Y 'sip.Method == "INVITE"' -T text | grep -E "a=crypto|RTP/SAVP"
+  Expected: "a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:<key>"
+  Missing: SDES key not offered -> falls back to RTP/AVP (unencrypted)
+
+Step 2 -- Confirm SRTP packets are flowing:
+  tshark -r capture.pcap -Y 'srtp' | wc -l
+  Zero = SRTP session not established (SDP negotiation failed or NAT blocked media)
+  Non-zero = SRTP data flowing; quality analysis via outer header is possible
+
+Step 3 -- Analyze RTP quality from outer header (encryption is irrelevant):
+  tshark -r capture.pcap -q -z rtp,streams
+  # Sequence numbers, timestamps, and inter-arrival jitter are in the outer header
+  # Payload decryption NOT needed to measure packet loss, jitter, or delta-time
+
+Step 4 -- If DTLS-SRTP (WebRTC or modern SBC):
+  tshark -r capture.pcap -Y 'rtp.setup-method == "DTLS-SRTP"'
+  # Also filter 'dtls' to see ClientHello / ServerHello / Finished handshake
+  # Failure: DTLS handshake timeout -> no SRTP session -> no audio
+
+Step 5 -- SRTP key mismatch symptom:
+  SRTP packets present + zero decoded audio at endpoint = key mismatch
+  Check: does SDP re-INVITE (hold/resume) refresh a=crypto with a new key?
+  Some SBCs generate a new SRTP key on re-INVITE; endpoints must update session key.
+```
+
+**Determine SRTP usage before starting capture:**
+
+```bash
+# Check CM codec set for SRTP:
+# CM SAT: display ip-codec-set <N>
+# Look for: media-encryption: 1-srtp-aescm128-hmac80
+
+# Confirm from live SDP in capture:
+ngrep -I capture.pcap "a=crypto" port 5060 | grep -c "crypto"
+# 0 = no SRTP in use -> apply plain rtp.* filters
+# >0 = SRTP in use -> apply srtp.enc_payload and sdp.media filters
+```
+
+---
+
+### DTMF Three-Path Analysis
+
+Three mechanisms deliver DTMF in SIP calls. Match the diagnostic approach to the negotiated method:
+
+| DTMF Method | SDP Negotiation | Filter | How to Identify |
+|------------|-----------------|--------|-----------------|
+| **RFC 2833 / RFC 4733 (out-of-band RTP)** | `a=rtpmap:101 telephone-event/8000` | `rtp.p_type == 101` | RTP packets with PT=101; `rtpevent.event_id` = digit value |
+| **SIP INFO** | No SDP entry (Content-Type: application/dtmf-relay) | `sip.Method == "INFO"` | SIP INFO body: `Signal=5\r\nDuration=160` |
+| **In-band (analog tones)** | Any codec; tones embedded in audio payload | `rtp.p_type == 0` or `rtp.p_type == 8` | No filter -- detect via Audacity spectrum analysis |
+
+#### RFC 2833 Digit Decoding
+
+```bash
+# Extract each DTMF digit with timestamp and end-of-event flag:
+tshark -r capture.pcap -Y 'rtp.p_type == 101' \
+  -T fields \
+  -e frame.time_relative \
+  -e ip.src -e ip.dst \
+  -e rtpevent.event_id \
+  -e rtpevent.end_of_event \
+  -e rtpevent.duration
+
+# rtpevent.event_id: 0-9 = digits 0-9 | 10 = * | 11 = # | 12-15 = A-D
+# rtpevent.end_of_event == 1 = final packet for that digit (use for de-duplication)
+# rtpevent.duration = RTP timestamp units (divide by 8 for ms at 8000 Hz sampling rate)
+
+# Count complete digits received (verify IVR receives all keystrokes):
+tshark -r capture.pcap -Y 'rtp.p_type == 101 and rtpevent.end_of_event == 1' | wc -l
+```
+
+#### SIP INFO DTMF Extraction
+
+```bash
+# List all SIP INFO events with Content-Type:
+tshark -r capture.pcap \
+  -Y 'sip.Method == "INFO"' \
+  -T fields -e frame.time -e ip.src -e ip.dst -e sip.content_type
+
+# Full body including Signal= value (ngrep shows raw SIP including body):
+ngrep -I capture.pcap -W byline "Signal=" port 5060
+# Body format: Signal=5  Duration=160   (Duration in ms)
+```
+
+#### In-Band DTMF Detection (Audacity)
+
+When RFC 2833 and SIP INFO are both absent but DTMF is expected:
+
+1. Export RTP stream: Wireshark `Telephony > RTP > Stream Analysis` -> select stream -> `Save payload`
+2. Convert to WAV: `ffmpeg -f mulaw -ar 8000 -ac 1 -i stream.raw stream.wav`
+3. Open in Audacity: `Analyze > Plot Spectrum` -- look for simultaneous row + column DTMF frequency peaks
+   - Rows: 697 / 770 / 852 / 941 Hz
+   - Columns: 1209 / 1336 / 1477 / 1633 Hz
+4. No tonal peaks visible: phone attempts RFC 2833 but `a=fmtp:101 0-15` absent from SDP
+
+---
+
+### Key Trace Analysis Principles (Field-Validated)
+
+1. **Differentiate signaling failure from audio stream failure first.** A call can complete
+   SIP signaling (200 OK received) with no audio. Conversely, a call with mid-call SIP errors
+   (3xx/4xx re-INVITE) may still have active RTP. Check both planes independently before
+   forming a root-cause hypothesis.
+
+2. **No SRTP decryption needed for quality analysis.** RTP sequence numbers, timestamps,
+   and outer IP/UDP headers remain unencrypted in SRTP. `tshark -q -z rtp,streams` correctly
+   computes jitter, loss, and delta-time from SRTP captures without decryption.
+
+3. **SIP dialects vary by vendor.** Avaya SM, Cisco CUBE, AudioCodes, and carrier SBCs each
+   add proprietary headers (`P-Avaya-Cl-Info`, `X-BroadWorks-Correlation-ID`, etc.). These
+   appear in Wireshark frames but lack dedicated display filters -- use `frame contains "X-"`
+   as a generic filter to surface proprietary headers for cross-vendor comparison.
+
+4. **Early Offer vs. Delayed Offer changes the codec diagnosis sequence.** In Early Offer,
+   the INVITE carries SDP (normal). In Delayed Offer, the INVITE has no SDP body -- the offer
+   comes in the 200 OK and the answer comes in the ACK. When analyzing codec mismatch, check
+   whether `Content-Type: application/sdp` appears in the INVITE. If absent, the real codec
+   negotiation is in the `200 OK` -> `ACK` exchange, not the `INVITE` -> `200 OK`.
+
+5. **Session-Timer re-INVITEs are periodic and expected.** RFC 4028 Session-Timer generates
+   keep-alive re-INVITEs (default 1800 s, often 90 s on Avaya SBCs). These appear as mid-call
+   INVITEs in the capture. To distinguish keep-alive from real media-renegotiation re-INVITEs:
+   look for `Supported: timer` or `Session-Expires` headers. Real hold/transfer re-INVITEs
+   will change the SDP `a=sendrecv` / `a=sendonly` / `a=recvonly` direction attribute.
