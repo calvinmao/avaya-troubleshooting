@@ -396,6 +396,12 @@ Step 8 — Proactive Contact (Legacy MTC) / Dialer Issues
     4. Verify EPM connectivity after restart
 ```
 
+### POM Predictive Agent Bridging Invariants (per `POM simple call flow.docx` Step ⑲)
+
+- **POM Predictive uses SIP Replaces** — not pure AMS RTP mixing. Three concurrent SIP dialogs during bridging: A (nail-up to agent, long-lived), B (original customer leg / CCA probe, torn down after Replaces), C (post-Replaces customer leg, distinct MPP RTP port from B). The nail-up CXI session — NOT the driver session — emits the `INVITE` with `Replaces:` header. CM B2BUA then must (a) 200 OK + BYE on MPP-facing side of Dialog B, (b) re-INVITE on PSTN-facing dialog with new SDP, (c) bridge endpoints at AMS mixer. Sub-step (b) is the typical intermittent failure point. Reference: SR `1-23647477802` for confirmed defect on CM R020x.02.0.229.0.
+- **Verify campaign pacing before applying Predictive diagnostics**: Campaign Detail Report column "Rhythm type" = `Automatic control` means Predictive (Replaces-based). Other values may use different bridging — Progressive in particular may not use Replaces in some POM versions (verify before recommending Predictive→Progressive as workaround).
+- **"Duration of the whistle" field in Campaign Detail Report is the high-precision time anchor for Phase D**: Populated only when bridging executed. The whistle timestamp falls within ~18–20 ms of the actual Replaces INVITE send on the wire (CXI plays the beep tone to the agent leg in parallel with `command.createcall`). Use whistle ± 50 ms window when searching MPP `SessionManager.log*` for `SND ^INVITE` with `Replaces:` header. If whistle is empty, Phase D did NOT execute — the failure is upstream of bridging (no Answer_Human, no agent), NOT a Replaces propagation defect.
+
 ---
 
 ## CMS Historical Report Discrepancies

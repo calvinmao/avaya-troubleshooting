@@ -94,6 +94,12 @@ Step 4 — Common Fixes
   - Codec mismatch: align endpoint ↔ CM ↔ trunk codec capabilities
 ```
 
+### Post-Bridging One-Way Audio Invariants (SIP Replaces / B2BUA)
+
+- **CSeq distribution per Call-ID is the smoking-gun test for B2BUA Replaces propagation defects**: For any SIP dialog Call-ID, count CSeq method occurrences across ALL pcap files + SM syslog stream. Normal Replaces-driven call shows `1 INVITE, 1 ACK, 2 INVITE, 2 ACK, 3 BYE`. Failed downstream propagation shows `1 INVITE, 1 ACK, 2 BYE` (CSeq jumps directly from 1 INVITE to 2 BYE — no CSeq:2 INVITE in any direction). Always run this test BEFORE concluding a re-INVITE was issued — single grep + count rules out / confirms the defect class in seconds. Reference: SR `1-23647477802` BC1/BC2 both showed CSeq:2 INVITE = 0 on their B5000-facing dialogs.
+- **Same-window normal-call control discriminates per-call defects from configuration**: For intermittent post-bridging audio failures (~few % incidence), find a normal call in the same captured time window exhibiting the expected CSeq:1→2→3 pattern. Same CM, same SM, same SBC, same campaign — if some calls work and others don't, the defect is per-call (race condition, edge case in B2BUA logic), eliminating the entire "system misconfigured" hypothesis class. Required step before PEA escalation. Reference: SR `1-23647477802` used `de723eec5d5641f184c90505695906f` as control evidence in the same 2-minute window as failing BC1.
+- **Pcap coverage gap recognition**: If MPP IP shows only `OPTIONS` keepalive SIP and no INVITE/ACK/BYE in a time window where bridging events should appear, the customer's capture point is downstream of the MPP↔SM↔CM segment. Don't conclude "no Replaces was sent" from pcap alone — require MPP `SessionManager.log` or `CCXML-SessionSlot-*.log` corroboration.
+
 ---
 
 ## SIP Trunk Registration
