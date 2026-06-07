@@ -196,3 +196,34 @@ These are empirically validated facts. Full details in `references/diagnostic-pr
 - **`connBelongToDifferentDeviceIDType` flag** in trace = smoking gun for park/unpark TSCall destruction.
 - **OLE2 .doc files**: parse with `olefile`, not `python-docx`.
 - **SA9114/SA9124** on `display system-features` must be checked before deep JTAPI null-address analysis.
+
+## Wiki Knowledge Base
+
+**Vault:** `C:/claude-obsidian` (claude-obsidian plugin, v1.9.2)
+
+The wiki is a SUPPLEMENT to this plugin's reference files — check it when you need cross-session context, recently ingested documents, or synthesis that spans multiple cases. Do NOT use it to replace the plugin's own `references/*.md` files.
+
+**Reading protocol:**
+1. Read `C:/claude-obsidian/wiki/hot.md` first — recent context (~500 words)
+2. If not enough, read `C:/claude-obsidian/wiki/index.md` — full catalog
+3. For domain specifics, read the matching wiki concept page directly (see mapping below)
+
+**Domain → wiki page mapping (for Avaya topics):**
+
+| Domain | Wiki Page |
+|--------|-----------|
+| AES, JTAPI, TSAPI, CSTA, DMCC, CTI | `wiki/concepts/AES CTI JTAPI.md` |
+| AACC, Oceana, POM, CMS, VDN, agent | `wiki/concepts/Avaya Contact Center.md` |
+| Recording, ACRA, WFO, WFE, Verint | `wiki/concepts/Avaya Recording WFO.md` |
+| SIP, RTP, voice quality, SBC | `wiki/concepts/Avaya SIP Voice Quality.md` |
+| Certificate, WebLM, login outage | `wiki/concepts/Avaya Certificates WebLM.md` |
+| Analytics, Kubernetes, bosh, Kafka | `wiki/concepts/Avaya Analytics Kubernetes.md` |
+| Security, AVAPT, NVAPT, CVE | `wiki/concepts/Avaya Security Assessment.md` |
+| Email, Social, ESL, CCMM | `wiki/concepts/Avaya Digital Channels.md` |
+| Log collection, getlogs, trace | `wiki/concepts/Avaya Log Collection.md` |
+| Cross-product, POM+Oceana, callback | `wiki/concepts/Avaya Cross-Product Orchestration.md` |
+| Linux, systemd, OOM, kernel | `wiki/concepts/Avaya Linux Server Diagnostics.md` |
+| Network, TCP, DNS, firewall, QoS | `wiki/concepts/Avaya Network Infrastructure.md` |
+| Core invariants (all domains) | `wiki/concepts/Avaya Diagnostic Principles.md` |
+
+Do NOT read the wiki for general coding questions or content already fully covered by the plugin's own reference files.

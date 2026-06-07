@@ -53,6 +53,8 @@ This file contains core invariants, cross-product integration, vendor escalation
 
 **Lessons auto-load with their reference.** When you load `references/<file>.md`, also load `lessons/<file>.md` (path: `${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/lessons/<file>.md`). Cite the `L-NNN` ID and SR provenance when applying a lesson. To capture a new lesson after a session, run `/avaya-learn`.
 
+**Wiki supplement (optional — check when reference files alone don't cover the question):** The `C:/claude-obsidian` vault contains compiled wiki pages for every Avaya domain. Read `C:/claude-obsidian/wiki/hot.md` for recent cross-session context, then the matching `wiki/concepts/<Domain>.md` page (see the domain map in CLAUDE.md) for supplementary knowledge from ingested documents and past cases. Do NOT use wiki pages as a replacement for this plugin's own reference files — use them for context that spans sessions or comes from external documents ingested into the vault.
+
 ## Validation — Confirm Before Closing
 
 Before declaring a root cause or resolution, verify:
