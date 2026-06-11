@@ -227,3 +227,17 @@ The wiki is a SUPPLEMENT to this plugin's reference files — check it when you 
 | Core invariants (all domains) | `wiki/concepts/Avaya Diagnostic Principles.md` |
 
 Do NOT read the wiki for general coding questions or content already fully covered by the plugin's own reference files.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
