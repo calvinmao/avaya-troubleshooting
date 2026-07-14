@@ -230,14 +230,17 @@ Do NOT read the wiki for general coding questions or content already fully cover
 
 ## Agent skills
 
-### Issue tracker
+### Triage (L1)
 
-Issues live as local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+Per the 5×5×3 methodology, session-level triage lives in
+`skills/avaya-debug/triage/` as an explicit L1 layer:
 
-### Triage labels
+- `triage/README.md` — L1 concept, relationship to L2–L5, and lifecycle
+- `triage/symptom-catalog.md` — fine-grained symptom → domain mapping
+  (fallback for ambiguous SKILL.md matches)
+- `triage/session-template.md` — structured SR working-notes template
+  (copy per SR; feed to `/avaya-learn` at closure)
 
-Default canonical label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
+See `docs/reform/PLAN.md` and `docs/reform/schema.md` for the reform
+history and the frontmatter contract every triage / lessons / references
+file follows.
