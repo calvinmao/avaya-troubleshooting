@@ -1,6 +1,13 @@
 # avaya-troubleshooting
 
+[![knowledge-lint](https://github.com/hmao911/avaya-troubleshooting/actions/workflows/knowledge-lint.yml/badge.svg)](https://github.com/hmao911/avaya-troubleshooting/actions/workflows/knowledge-lint.yml)
+
 Senior Avaya UC & CC troubleshooting plugin for Claude Code. Covers AES, JTAPI, TSAPI, CSTA, DMCC, AACC, Oceana, POM, Recording, WFO, Analytics, SIP, certificates, digital channels, IP Office, and security vulnerability assessment.
+
+**v2.0** — knowledge base organized against the **5×5×3 methodology**
+(5 storage layers × 5 knowledge types × 3 maturity levels). See
+`docs/reform/PLAN.md` for the reform history and `docs/reform/schema.md`
+for the YAML frontmatter contracts.
 
 ## Components
 
@@ -17,6 +24,8 @@ The main troubleshooting skill. Auto-activates when you mention Avaya product na
 | `/avaya-sr` | `/avaya-sr 12345678 AES null address on park` | Start a structured SR troubleshooting session |
 | `/avaya-report` | `/avaya-report` | Generate a formal SR report from current session analysis |
 | `/avaya-logs` | `/avaya-logs AACC` | Get exact log collection commands for a product |
+| `/avaya-learn` | `/avaya-learn [domain]` | Capture evidence-anchored L-NNN lessons from the current session |
+| `/avaya-gc` | `/avaya-gc [--dry-run] [--domain=X]` | Quarterly KB cleanup: promote, prune, backfill (added in v2.0) |
 
 ### Agent: `avaya-debugger`
 
@@ -68,3 +77,29 @@ My AACC agents go into Unknown state after transfer. VDN logs show skill routing
 ```
 /avaya-report
 ```
+
+## Development
+
+The knowledge base has CI enforcement via `scripts/lint_metadata.py` and
+`scripts/run_evals.py`. Both run on push and PR via
+`.github/workflows/knowledge-lint.yml`.
+
+Optional local pre-commit hooks (same lint + coverage checks) via
+`.pre-commit-config.yaml`:
+
+```bash
+pip install pre-commit PyYAML
+pre-commit install
+```
+
+Manual lint / eval runs:
+
+```bash
+python3 scripts/lint_metadata.py           # YAML frontmatter schema check
+python3 scripts/run_evals.py --mode a      # activation coverage (offline)
+python3 scripts/run_evals.py --mode b      # LLM-scored quality (opt-in, needs API key)
+```
+
+See `docs/reform/PLAN.md` for the v2.0 reform history and
+`docs/reform/schema.md` for the YAML frontmatter schemas that every
+`lessons/` and `references/` file must conform to.
