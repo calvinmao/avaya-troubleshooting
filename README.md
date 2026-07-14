@@ -92,6 +92,15 @@ pip install pre-commit PyYAML
 pre-commit install
 ```
 
+Optional post-commit hook that writes a sync marker to the
+claude-obsidian vault (cross-platform: WSL / Git Bash / Windows native /
+Linux; silently skips if no vault is present):
+
+```bash
+./scripts/install-git-hooks.sh
+# override the vault location with: export AVAYA_KB_MARKER_DIR=/path/to/.vault-meta
+```
+
 Manual lint / eval runs:
 
 ```bash
