@@ -9,6 +9,15 @@ Senior Avaya UC & CC troubleshooting plugin for Claude Code. Covers AES, JTAPI, 
 `docs/reform/PLAN.md` for the reform history and `docs/reform/schema.md`
 for the YAML frontmatter contracts.
 
+## 📖 User Guide · 使用指南
+
+**New to the plugin?** Start here:
+
+- [**User Guide (English)**](docs/USER_GUIDE.md) — installation, daily
+  workflow, quarterly maintenance, contributing, and FAQ.
+- [**使用指南(简体中文)**](docs/USER_GUIDE.zh-CN.md) — 安装、日常
+  工作流、季度维护、贡献、常见问题。
+
 ## Components
 
 ### Skill: `avaya-debug`
