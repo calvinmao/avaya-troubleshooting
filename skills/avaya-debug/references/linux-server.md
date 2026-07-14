@@ -1,12 +1,22 @@
-# Linux Server Troubleshooting Reference
-<!--
-scope: Linux OS health on Avaya servers (AES, SM, AACC, ACRA, EPM), systemd, kernel, sysctl, OOM, SELinux
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: RHEL/CentOS version-specific sysctl keys, systemd unit names per product version, Prometheus node-exporter metric names
-related_docs: log-collection.md, network-infrastructure.md, lessons/linux-server.md
--->
+---
+title: "Linux Server Troubleshooting Reference"
+layer: L4
+scope: "Linux OS health on Avaya servers (AES, SM, AACC, ACRA, EPM), systemd, kernel, sysctl, OOM, SELinux"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "RHEL/CentOS version-specific sysctl keys"
+  - "systemd unit names per product version"
+  - "Prometheus node-exporter metric names"
+related_docs:
+  - "log-collection.md"
+  - "network-infrastructure.md"
+  - "lessons/linux-server.md"
+---
 
+# Linux Server Troubleshooting Reference
 
 
 Diagnostic patterns for Linux-based Avaya servers (AES, Session Manager, AACC, ACRA,

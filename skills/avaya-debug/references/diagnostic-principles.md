@@ -1,12 +1,21 @@
-# Diagnostic Principles — Avaya UC & CC
+---
+title: "Diagnostic Principles — Avaya UC & CC"
+layer: L4
+scope: "avaya-uc-cc-all-domains"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "JTAPI Javadoc URLs"
+  - "CM SA flag names"
+  - "AES version-specific behavior"
+related_docs:
+  - "SKILL.md (routing)"
+  - "lessons/diagnostic-principles.md (field findings)"
+---
 
-<!--
-scope: avaya-uc-cc-all-domains
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: JTAPI Javadoc URLs, CM SA flag names, AES version-specific behavior
-related_docs: SKILL.md (routing), lessons/diagnostic-principles.md (field findings)
--->
+# Diagnostic Principles — Avaya UC & CC
 
 This reference is loaded for **every** Avaya troubleshooting session. It contains
 core invariants, cross-product integration facts, vendor escalation routes, and

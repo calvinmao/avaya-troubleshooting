@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# post-commit hook: write a sync marker to the claude-obsidian vault so
+# its SessionStart hook prompts a re-ingest on the next session.
+#
+# Cross-platform path detection:
+#   1. If AVAYA_KB_MARKER_DIR env var is set → use it verbatim (user override).
+#   2. Otherwise probe known vault locations for the current environment:
+#        - WSL:              /mnt/c/claude-obsidian/.vault-meta/
+#        - Git Bash / MSYS:  /c/claude-obsidian/.vault-meta/
+#        - Windows native:   C:/claude-obsidian/.vault-meta/
+#        - Linux/macOS:      ~/claude-obsidian/.vault-meta/
+#   3. If none exist, silently skip (the vault is optional).
+#
+# This hook is installed by scripts/install-git-hooks.sh — it lives under
+# version control so that any clone can enable it identically.
+
+set -eu
+
+candidates=()
+if [ -n "${AVAYA_KB_MARKER_DIR:-}" ]; then
+  candidates+=("${AVAYA_KB_MARKER_DIR}")
+else
+  candidates+=(
+    "/mnt/c/claude-obsidian/.vault-meta"
+    "/c/claude-obsidian/.vault-meta"
+    "C:/claude-obsidian/.vault-meta"
+    "${HOME}/claude-obsidian/.vault-meta"
+  )
+fi
+
+marker_dir=""
+for cand in "${candidates[@]}"; do
+  # A candidate is usable if its parent (the vault root) already exists.
+  # We do NOT create the vault itself — that would be surprising.
+  parent="$(dirname "${cand}")"
+  if [ -d "${parent}" ]; then
+    marker_dir="${cand}"
+    break
+  fi
+done
+
+if [ -z "${marker_dir}" ]; then
+  # Vault not present in any known location → nothing to sync. Exit silently.
+  exit 0
+fi
+
+# Create the .vault-meta subdir if it doesn't exist yet.
+mkdir -p "${marker_dir}"
+
+marker_file="${marker_dir}/avaya-needs-sync"
+date -u +"%Y-%m-%dT%H:%M:%SZ" > "${marker_file}"
+
+echo "[claude-obsidian] Wiki sync marker written to ${marker_file} — avaya-troubleshooting will be re-ingested on next session."

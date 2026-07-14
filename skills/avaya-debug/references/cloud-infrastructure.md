@@ -1,12 +1,23 @@
-# Cloud Infrastructure Troubleshooting Reference
-<!--
-scope: Avaya on AWS/Azure: EC2/VM, VPC/VNet, Security Groups/NSG, VPN, CloudWatch, EKS/AKS, AXP
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: AWS/Azure CLI flag changes, CloudWatch metric names, AXP API versions, EKS/AKS K8s version support
-related_docs: network-infrastructure.md, analytics-kubernetes.md, lessons/cloud-infrastructure.md
--->
+---
+title: "Cloud Infrastructure Troubleshooting Reference"
+layer: L4
+scope: "Avaya on AWS/Azure: EC2/VM, VPC/VNet, Security Groups/NSG, VPN, CloudWatch, EKS/AKS, AXP"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "AWS/Azure CLI flag changes"
+  - "CloudWatch metric names"
+  - "AXP API versions"
+  - "EKS/AKS K8s version support"
+related_docs:
+  - "network-infrastructure.md"
+  - "analytics-kubernetes.md"
+  - "lessons/cloud-infrastructure.md"
+---
 
+# Cloud Infrastructure Troubleshooting Reference
 
 
 Diagnostic patterns for Avaya deployments on cloud platforms: AWS, Azure, and hybrid

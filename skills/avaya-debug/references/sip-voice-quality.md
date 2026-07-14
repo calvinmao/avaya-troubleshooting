@@ -1,12 +1,23 @@
-# SIP / Voice Quality / Codec Troubleshooting Reference
-<!--
-scope: SIP signaling, RTP/SRTP, voice quality, SBC, codec, QoS, on-box capture tools (sngrep/tshark/ngrep)
-last_reviewed: 2026-06-04
-owner: avaya-debug skill
-staleness_risks: sngrep EPEL package availability per RHEL version, tshark SRTP/DTLS dissector flags (Wireshark >= 3.0 required for srtp.enc_payload), SBC vendor MIBs, rtpevent field names across Wireshark versions
-related_docs: network-infrastructure.md, diagnostic-principles.md, lessons/sip-voice-quality.md
--->
+---
+title: "SIP / Voice Quality / Codec Troubleshooting Reference"
+layer: L4
+scope: "SIP signaling, RTP/SRTP, voice quality, SBC, codec, QoS, on-box capture tools (sngrep/tshark/ngrep)"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-04"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "sngrep EPEL package availability per RHEL version"
+  - "tshark SRTP/DTLS dissector flags (Wireshark >= 3.0 required for srtp.enc_payload)"
+  - "SBC vendor MIBs"
+  - "rtpevent field names across Wireshark versions"
+related_docs:
+  - "network-infrastructure.md"
+  - "diagnostic-principles.md"
+  - "lessons/sip-voice-quality.md"
+---
 
+# SIP / Voice Quality / Codec Troubleshooting Reference
 
 
 Reference for Avaya Aura SIP signaling, RTP/voice quality, codec negotiation,

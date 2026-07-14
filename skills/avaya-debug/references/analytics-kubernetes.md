@@ -1,12 +1,22 @@
-# Analytics / Oceanalytics / Kubernetes Troubleshooting Reference
-<!--
-scope: Oceanalytics, Kubernetes/bosh/CFCR, Kafka, MicroStrategy, PV alarms
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: Pod count expected per Analytics version, bosh director recovery steps, Kubernetes API versions
-related_docs: diagnostic-principles.md, linux-server.md, lessons/analytics-kubernetes.md
--->
+---
+title: "Analytics / Oceanalytics / Kubernetes Troubleshooting Reference"
+layer: L4
+scope: "Oceanalytics, Kubernetes/bosh/CFCR, Kafka, MicroStrategy, PV alarms"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "Pod count expected per Analytics version"
+  - "bosh director recovery steps"
+  - "Kubernetes API versions"
+related_docs:
+  - "diagnostic-principles.md"
+  - "linux-server.md"
+  - "lessons/analytics-kubernetes.md"
+---
 
+# Analytics / Oceanalytics / Kubernetes Troubleshooting Reference
 
 
 ## Table of Contents

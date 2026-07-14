@@ -1,3 +1,10 @@
+---
+domain: linux-server
+default_layer: L3
+default_type: experience
+last_reviewed: null
+---
+
 # Lessons — Linux Server
 
 Field-captured findings for Linux OS health, systemd service management, kernel

@@ -8,14 +8,56 @@ A Codex plugin providing senior Avaya UC & CC troubleshooting expertise. It cont
 
 ## Design Alignment
 
-This plugin is designed against the [agents-best-practices](https://github.com/DenisSergeevitch/agents-best-practices) engineering guide. Key principles applied:
+This plugin is organized against the **5×5×3 knowledge methodology**
+(5 storage layers × 5 knowledge types × 3 maturity levels) and against
+the [agents-best-practices](https://github.com/DenisSergeevitch/agents-best-practices)
+engineering guide.
+
+See `docs/reform/PLAN.md` for the reform history and
+`docs/reform/schema.md` for the YAML frontmatter contracts.
+
+Key principles applied:
 
 - **SKILL.md is a routing map, not an encyclopedia** — detailed invariants live in `references/diagnostic-principles.md`
 - **Progressive disclosure** — only the matching domain reference is loaded per session
-- **Lessons feedback loop** — `/avaya-learn` captures field findings; `/avaya-report` nudges capture post-session
-- **Evals for skill quality** — `evals/` contains activation and output-quality test cases
-- **Metadata on every reference** — `scope`, `last_reviewed`, `staleness_risks` header in each `references/*.md`
-- **Entropy/GC workflow** — see "Knowledge Base Maintenance" below
+- **YAML frontmatter on every knowledge file** — machine-parseable metadata (layer / type / maturity / versions / provenance) enables CI enforcement and tooling
+- **Lessons feedback loop** — `/avaya-learn` captures field findings as L-NNN drafts; promotion to `verified` after ≥2 SR reproduction or generalizable evidence
+- **Maturity ladder** — `draft` → `verified` → `canonical` (achieved by promotion into `references/`)
+- **Evals for skill quality** — `evals/` contains activation and output-quality test cases; enforced by CI
+- **Entropy/GC workflow** — `/avaya-gc` for quarterly cleanup; see "Knowledge Base Maintenance" below
+
+## 5×5×3 Methodology
+
+The knowledge base is organized along three orthogonal dimensions:
+
+### Storage layers (5)
+
+| Layer | Purpose | Lives in |
+|-------|---------|----------|
+| **L1 Triage** | Session-level: symptom routing, working notes, hypothesis chain | `skills/avaya-debug/triage/` |
+| **L2 Process** | Reusable playbooks, log-collection commands, slash commands | `commands/`, `skills/avaya-debug/references/log-collection.md` |
+| **L3 Vault** | Evidence-anchored L-NNN lessons from closed SRs | `skills/avaya-debug/lessons/` |
+| **L4 Standard** | Canonical domain references and diagnostic invariants | `skills/avaya-debug/references/` |
+| **L5 Strategy** | Long-lived design decisions and cross-product architecture | `CLAUDE.md`, `AGENTS.md`, `docs/reform/` |
+
+### Knowledge types (5)
+
+`fact` · `process` · `decision` · `experience` · `pattern` — declared per L-NNN entry.
+Guides how the knowledge should be consumed and reused.
+
+### Maturity levels (3)
+
+| Level | Meaning | Consumer trust |
+|-------|---------|----------------|
+| `draft` | Single-SR finding, not cross-validated | Diagnostic hint only; senior review required before customer application |
+| `verified` | ≥2 SR reproduction OR generalizable code path/trace/flag OR peer sign-off | Trusted for direct application |
+| `canonical` | Promoted into `references/*.md` and part of the standard corpus | Strongly authoritative |
+
+When an SR closure invalidates a previously-verified lesson (as with
+SR 1-23647477802 in June 2026), the lesson is demoted back to `draft`
+with `promotion.status: rejected`, and the body is rewritten to reflect
+corrected understanding. This is the operational answer to KB hygiene
+under root-cause reversal.
 
 ## Installation & Reload
 
@@ -23,18 +65,22 @@ This plugin is designed against the [agents-best-practices](https://github.com/D
 # Install from local marketplace
 /plugin install avaya-troubleshooting@local-plugins
 
-# After any edit to plugin files, restart Codex to pick up changes
+# After any edit to plugin files, restart Claude Code to pick up changes
 ```
 
 ## Plugin Structure
 
 ```
-.Codex-plugin/
+.claude-plugin/
   plugin.json          # Plugin identity (name, version, author)
   marketplace.json     # Local marketplace registration pointing to ./
 skills/avaya-debug/
   SKILL.md             # Routing map — triggers + progressive loading table (lean)
-  references/          # Domain reference files (loaded on demand)
+  triage/              # L1 — session-level triage (added in v2.0 reform)
+    README.md          # L1 concept + relationship to L2-L5
+    symptom-catalog.md # Fine-grained symptom → domain mapping (fallback for ambiguous SKILL.md matches)
+    session-template.md # Structured SR working-notes template (copy per SR)
+  references/          # L4 — domain reference files (loaded on demand)
     diagnostic-principles.md  # Always-loaded: core invariants, cross-product, vendor escalation
     aes-cti-jtapi.md           # AES, JTAPI, TSAPI, CSTA, DMCC
     contact-center.md          # AACC, Oceana, POM, CMS, VDN, vector
@@ -50,8 +96,8 @@ skills/avaya-debug/
     linux-server.md            # Linux OS health, systemd, kernel, OOM
     network-infrastructure.md  # TCP/IP, DNS, firewall, QoS, MTU
     cloud-infrastructure.md    # AWS, Azure, EKS/AKS, AXP
-  lessons/             # Field-captured findings, mirrors references/ 1:1
-    README.md          # L-NNN convention, promotion rules
+  lessons/             # L3 — field-captured L-NNN findings, mirrors references/ 1:1
+    README.md          # L-NNN schema, maturity ladder, promotion rules
     diagnostic-principles.md  # Cross-domain invariant lessons
     <domain>.md        # One file per reference domain
 evals/
@@ -62,8 +108,19 @@ commands/
   avaya-report.md      # /avaya-report — generate formal SR report
   avaya-logs.md        # /avaya-logs — get product-specific log commands
   avaya-learn.md       # /avaya-learn — capture lessons from current session
+  avaya-gc.md          # /avaya-gc — quarterly KB cleanup (added in v2.0 reform)
 agents/
   avaya-debugger.md    # Subagent for parallel trace analysis tasks
+scripts/               # (added in v2.0 reform) — CI harness
+  lint_metadata.py     # YAML frontmatter schema validator
+  run_evals.py         # Mode A (offline coverage) + Mode B (LLM-scored, opt-in)
+.github/workflows/     # (added in v2.0 reform) — CI on push/PR
+  knowledge-lint.yml   # Runs lint_metadata.py + run_evals.py --mode a
+  eval-full.yml        # Manual-trigger mode B evals (needs ANTHROPIC_API_KEY)
+.pre-commit-config.yaml # Same lint/coverage checks for local dev
+docs/reform/           # (added in v2.0 reform)
+  PLAN.md              # 6-phase reform history and risk register
+  schema.md            # YAML frontmatter contracts (lessons + references)
 ```
 
 ## Architecture: Progressive Reference Loading
@@ -117,28 +174,65 @@ Append a `### Should-Trigger Cases` block to `evals/activation.md` and a `### OQ
 
 ## Learning Loop
 
-The plugin grows from real cases through a two-tier capture flow:
+The plugin grows from real cases through a two-tier capture flow governed
+by the L-NNN YAML schema in `skills/avaya-debug/lessons/README.md`:
 
-1. **Capture** — At the end of a session run `/avaya-learn` (or accept the post-report nudge in `/avaya-report`). It scans the session for evidence-anchored findings, drafts `L-NNN` entries, and on approval appends them to the matching `skills/avaya-debug/lessons/<domain>.md`.
-2. **Promote** — If a lesson meets the promotion rule in `skills/avaya-debug/lessons/README.md` — reproduced across ≥2 SR cases OR identifies a generalizable code path / trace string / config flag — `/avaya-learn` proposes a concrete edit to the canonical `references/<domain>.md`. On approval the edit is applied and the lesson's `Promotion:` line is updated with the target anchor and date.
+1. **Capture** — At the end of a session run `/avaya-learn` (or accept the
+   post-report nudge in `/avaya-report`). It scans the session for
+   evidence-anchored findings, drafts `L-NNN` entries as YAML frontmatter
+   blocks (with `maturity: draft`, `promotion.status: pending`), and on
+   approval appends them to the matching
+   `skills/avaya-debug/lessons/<domain>.md`.
+2. **Promote** — If a lesson meets the promotion rule in
+   `skills/avaya-debug/lessons/README.md` — reproduced across ≥2 SR cases
+   OR identifies a generalizable code path / trace string / config flag —
+   `/avaya-learn` (or `/avaya-gc` during quarterly review) proposes a
+   concrete edit to the canonical `references/<domain>.md`. On approval:
+   - The edit is applied to the reference.
+   - The lesson's frontmatter is updated:
+     `maturity: draft → verified`,
+     `promotion.status: pending → promoted`,
+     `promotion.target: "references/<domain>.md#<anchor>"`,
+     `promotion.date: "<YYYY-MM-DD>"`.
 
-Lessons auto-load whenever their matching reference loads, so accumulated field knowledge is always available the moment the right domain activates. When an `L-NNN` ID appears in a report or analysis, find it under `skills/avaya-debug/lessons/` — the `Provenance:` line gives the source SR for verification.
+Lessons auto-load whenever their matching reference loads, so accumulated
+field knowledge is always available the moment the right domain
+activates. When an `L-NNN` ID appears in a report or analysis, find it
+under `skills/avaya-debug/lessons/` — the frontmatter `provenance` block
+gives the source SR for verification.
+
+**Demotion on invalidation**: when a new SR closure invalidates a
+previously-verified lesson (as with SR 1-23647477802 in June 2026),
+`/avaya-learn` demotes the lesson back to `maturity: draft` +
+`promotion.status: rejected`, rewrites the body to reflect corrected
+understanding, and cites the invalidating SR. This is the operational
+answer to KB hygiene under root-cause reversal.
 
 ## Knowledge Base Maintenance (Entropy / GC)
 
-Run periodically (suggested: quarterly, or after 10+ new lessons):
+Run `/avaya-gc` quarterly (or after every 10+ new lessons). The command
+implements this 7-step workflow interactively (read-and-propose only;
+every mutation requires per-finding approval):
 
 ```
-1. Scan lessons/ for L-NNN entries with Promotion: pending — propose promotion if ≥2 SRs
-2. Check each reference file's last_reviewed date — flag files not reviewed in >6 months
+1. Scan lessons/ for L-NNN with promotion.status: pending — propose promotion if ≥2 SRs
+2. Check each reference's last_reviewed date — flag files not reviewed in >6 months
 3. Scan for duplicate or near-duplicate invariants across references/
-4. Remove or merge lesson entries that have been promoted (keep Promotion: line as audit trail)
-5. Update evals/activation.md with any new product triggers added in SKILL.md
-6. Update evals/output-quality.md with OQ-NNN entries from production incidents
-7. Review staleness_risks metadata in each reference — update version-specific content
+4. Collapse already-promoted lessons to audit stubs (keep frontmatter + heading for citation)
+5. Update evals/activation.md with any new SKILL.md triggers not yet exercised
+6. Refresh staleness_risks per reference — remove realized risks, add newly emerged
+7. Sweep versions: [TBD] entries — propose backfills from Evidence text (added in v2.0)
 ```
 
-Per the agents-best-practices guide: *"Repeated failures should become tools, validators, docs, evals, or policies rather than repeated prompt advice."* When a diagnostic error recurs, add an OQ-NNN eval case, not just a SKILL.md reminder.
+Per the agents-best-practices guide: *"Repeated failures should become
+tools, validators, docs, evals, or policies rather than repeated prompt
+advice."* When a diagnostic error recurs, add an OQ-NNN eval case, not
+just a SKILL.md reminder.
+
+**Enforcement**: `scripts/lint_metadata.py` runs in CI (`.github/workflows/knowledge-lint.yml`)
+on every push and PR, gating merges to master on schema conformance.
+`scripts/run_evals.py --mode a` runs alongside it to catch drift between
+SKILL.md triggers and `evals/activation.md` cases.
 
 ## IT Ops Maintenance Patterns
 
@@ -199,13 +293,13 @@ These are empirically validated facts. Full details in `references/diagnostic-pr
 
 ## Wiki Knowledge Base
 
-**Vault:** `C:/Codex-obsidian` (Codex-obsidian plugin, v1.9.2)
+**Vault:** `C:/claude-obsidian` (claude-obsidian plugin, v1.9.2)
 
 The wiki is a SUPPLEMENT to this plugin's reference files — check it when you need cross-session context, recently ingested documents, or synthesis that spans multiple cases. Do NOT use it to replace the plugin's own `references/*.md` files.
 
 **Reading protocol:**
-1. Read `C:/Codex-obsidian/wiki/hot.md` first — recent context (~500 words)
-2. If not enough, read `C:/Codex-obsidian/wiki/index.md` — full catalog
+1. Read `C:/claude-obsidian/wiki/hot.md` first — recent context (~500 words)
+2. If not enough, read `C:/claude-obsidian/wiki/index.md` — full catalog
 3. For domain specifics, read the matching wiki concept page directly (see mapping below)
 
 **Domain → wiki page mapping (for Avaya topics):**
@@ -230,14 +324,17 @@ Do NOT read the wiki for general coding questions or content already fully cover
 
 ## Agent skills
 
-### Issue tracker
+### Triage (L1)
 
-Issues live as local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+Per the 5×5×3 methodology, session-level triage lives in
+`skills/avaya-debug/triage/` as an explicit L1 layer:
 
-### Triage labels
+- `triage/README.md` — L1 concept, relationship to L2–L5, and lifecycle
+- `triage/symptom-catalog.md` — fine-grained symptom → domain mapping
+  (fallback for ambiguous SKILL.md matches)
+- `triage/session-template.md` — structured SR working-notes template
+  (copy per SR; feed to `/avaya-learn` at closure)
 
-Default canonical label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
+See `docs/reform/PLAN.md` and `docs/reform/schema.md` for the reform
+history and the frontmatter contract every triage / lessons / references
+file follows.

@@ -1,0 +1,50 @@
+name: knowledge-lint
+
+on:
+  push:
+    branches:
+      - master
+      - 'reform/**'
+    paths:
+      - 'skills/avaya-debug/**'
+      - 'evals/**'
+      - 'scripts/**'
+      - '.github/workflows/knowledge-lint.yml'
+  pull_request:
+    paths:
+      - 'skills/avaya-debug/**'
+      - 'evals/**'
+      - 'scripts/**'
+      - '.github/workflows/knowledge-lint.yml'
+
+jobs:
+  lint-metadata:
+    name: Frontmatter schema lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install PyYAML
+
+      - name: Lint lessons and references frontmatter
+        run: python3 scripts/lint_metadata.py
+
+  evals-mode-a:
+    name: Activation coverage (offline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run activation coverage evals (mode A, offline)
+        run: python3 scripts/run_evals.py --mode a

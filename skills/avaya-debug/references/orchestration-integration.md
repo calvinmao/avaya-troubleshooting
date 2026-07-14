@@ -1,12 +1,22 @@
-# Cross-Product Orchestration & Integration Troubleshooting Reference
-<!--
-scope: POM + Oceana cross-product, callback delivery, CCMM, Workspace integration, campaign routing, CRM
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: API endpoint versions, callback webhook payload formats, CCMM connector configuration
-related_docs: contact-center.md, digital-channels.md, lessons/orchestration-integration.md
--->
+---
+title: "Cross-Product Orchestration & Integration Troubleshooting Reference"
+layer: L4
+scope: "POM + Oceana cross-product, callback delivery, CCMM, Workspace integration, campaign routing, CRM"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "API endpoint versions"
+  - "callback webhook payload formats"
+  - "CCMM connector configuration"
+related_docs:
+  - "contact-center.md"
+  - "digital-channels.md"
+  - "lessons/orchestration-integration.md"
+---
 
+# Cross-Product Orchestration & Integration Troubleshooting Reference
 
 
 Reference for multi-product orchestration failures involving POM, Oceana, AACC, CCMM, AEP, and digital channels (SMS/email/social). Covers async coordination issues, callback workflows, and integration timeout patterns.

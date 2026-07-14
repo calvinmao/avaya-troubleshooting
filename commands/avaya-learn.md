@@ -28,18 +28,40 @@ Use the same trigger-keyword table from `${CLAUDE_PLUGIN_ROOT}/skills/avaya-debu
 
 For each accepted domain, Read the corresponding `${CLAUDE_PLUGIN_ROOT}/skills/avaya-debug/lessons/<domain>.md` to find the next available `L-NNN` ID (monotonic per file, zero-padded to 3 digits).
 
-Draft each entry using this exact template:
+Draft each entry using this **YAML-frontmatter + Markdown body** template. The frontmatter block MUST precede the `## L-NNN` heading:
 
 ```markdown
+---
+id: L-<NNN>
+layer: L3
+type: experience              # fact | process | decision | experience | pattern
+maturity: draft               # ALWAYS draft on capture — never verified/canonical on first save
+versions:                     # extract from Evidence text; use [TBD] if unclear
+  - "<product X.Y.Z or X.Y.x>"
+provenance:
+  sr: "<SR-number>"
+  date: "<YYYY-MM-DD>"
+promotion:
+  status: pending
+  target: null
+  date: null
+  note: null                  # optional qualifier, e.g. "awaiting 2nd case"
+owner: "<@github-handle>"     # ask user if not obvious from session context
+---
+
 ## L-<NNN> — <one-line symptom>
 
 - **Symptom**: <what the customer or trace shows>
 - **Evidence**: <exact trace string, file:line, config field, javadoc URL, or grep target>
 - **Root cause**: <specific, evidence-anchored>
 - **Fix / workaround**: <action — config change, PEA, vendor escalation, code fix>
-- **Provenance**: SR <number> | <YYYY-MM-DD>
-- **Promotion**: pending
 ```
+
+**Inference rules** for auto-populating fields:
+
+- `type`: default to `experience` (single-SR field capture). Upgrade to `pattern` if the finding is a reusable diagnostic rule; `decision` if it captures a framing/communication guidance; `process` if it is a runbook step; `fact` if it is an objective invariant.
+- `versions`: grep Evidence text for patterns like `AEP 8.1.2.2`, `POM 4.0.x`, `AACC 7.x`, `WFO R12.0`. If nothing matches → `[TBD]`. Do not guess.
+- `maturity`: **always `draft`** on capture. Promotion to `verified` is a separate step (Step 5).
 
 Present all drafts in a single numbered list to the user, including any candidates you rejected and why:
 
@@ -55,8 +77,9 @@ Found N candidate lessons:
 Ask the user which to save (multi-select, e.g. "save 1 and 2, skip 3"). For each approved entry:
 
 1. **Idempotency check**: search the target `lessons/<domain>.md` for an existing entry whose Symptom or Evidence line matches. If found, surface "L-NNN already covers this — update instead of duplicate?" and either merge or skip.
-2. Append the new entry to `lessons/<domain>.md` using the Edit tool.
-3. Confirm by listing the saved entries with their `L-NNN` IDs.
+2. Append the new entry to `lessons/<domain>.md` using the Edit tool. Append **both** the YAML frontmatter block AND the `## L-NNN` heading + body — they belong together.
+3. Update the file-level frontmatter's `last_reviewed` field to today's date if this is the first entry, or leave alone otherwise.
+4. Confirm by listing the saved entries with their `L-NNN` IDs.
 
 ## Step 5 — Propose promotion to the canonical reference
 
@@ -69,7 +92,12 @@ For each eligible lesson:
 1. Read the matching `references/<domain>.md` and locate the right section header (or propose a new one).
 2. Draft a concrete edit — usually a new bullet under that header — written in the same dense invariant style as `SKILL.md` items 14–16.
 3. Show the diff (old context + new bullet) and ask: **"Promote L-NNN to references/<domain>.md now?"**
-4. On approval: apply the edit AND update the lesson's `Promotion:` line from `pending` to `promoted to references/<domain>.md#<anchor> on <YYYY-MM-DD>`.
-5. On rejection: change `Promotion:` to `rejected — <one-line reason>`.
+4. On approval: apply the edit to `references/<domain>.md` AND update the lesson's YAML frontmatter fields:
+   - `maturity: draft` → `maturity: verified`
+   - `promotion.status: pending` → `promotion.status: promoted`
+   - `promotion.target: null` → `promotion.target: "references/<domain>.md#<anchor>"`
+   - `promotion.date: null` → `promotion.date: "<YYYY-MM-DD>"`
+   - Keep the body unchanged.
+5. On rejection: update the frontmatter to `promotion.status: rejected` + set `promotion.date` and `promotion.note` (the one-line reason). Keep `maturity: draft`.
 
 If no candidates are found in Step 1, print: `No new lessons identified in this session.` and stop. Do not fabricate entries to fill the report.

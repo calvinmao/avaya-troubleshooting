@@ -1,3 +1,10 @@
+---
+domain: network-infrastructure
+default_layer: L3
+default_type: experience
+last_reviewed: null
+---
+
 # Lessons — Network Infrastructure
 
 Field-captured findings for TCP/IP connectivity, DNS resolution, routing, firewall

@@ -1,9 +1,9 @@
 {
   "name": "avaya-troubleshooting",
-  "version": "1.0.0",
-  "description": "Senior Avaya UC & CC troubleshooting expert. Diagnoses faults across AES, JTAPI, TSAPI, CSTA, DMCC, AACC, Oceana, POM, Recording, Analytics, SIP, certificates, email/social channels, IP Office, and more. Includes structured SR workflows, trace analysis, and cross-layer correlation.",
+  "version": "2.0.0",
+  "description": "Senior Avaya UC & CC troubleshooting expert, organized against the 5x5x3 knowledge methodology (5 storage layers x 5 knowledge types x 3 maturity levels). Diagnoses faults across AES, JTAPI, TSAPI, CSTA, DMCC, AACC, Oceana, POM, Recording, Analytics, SIP, certificates, email/social channels, IP Office, and more. Includes structured SR workflows, trace analysis, cross-layer correlation, session-level triage (L1), and quarterly KB garbage collection.",
   "author": {
     "name": "hmao911"
   },
-  "keywords": ["avaya", "uc", "cc", "aes", "jtapi", "aacc", "oceana", "pom", "recording", "troubleshooting", "sip"]
+  "keywords": ["avaya", "uc", "cc", "aes", "jtapi", "aacc", "oceana", "pom", "recording", "troubleshooting", "sip", "knowledge-management", "5x5x3"]
 }

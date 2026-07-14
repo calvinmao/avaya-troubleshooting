@@ -1,3 +1,10 @@
+---
+domain: cloud-infrastructure
+default_layer: L3
+default_type: experience
+last_reviewed: null
+---
+
 # Lessons — Cloud Infrastructure
 
 Field-captured findings for Avaya deployments on AWS and Azure: EC2/VM health,
