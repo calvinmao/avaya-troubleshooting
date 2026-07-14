@@ -13,20 +13,36 @@ Field-captured findings for SIP signaling, one-way audio, codec negotiation, QoS
 - **Provenance**: SR 1-23156789012 | 2025-01-22
 - **Promotion**: pending (awaiting second carrier verification)
 
-## L-002 — CSeq Distribution Per Call-ID Is the Smoking Gun for B2BUA Replaces Propagation Defects
+## L-002 — RTP Packet Presence/Absence Is the Authoritative Diagnostic for SIP Media Issues — Not Signaling Inference
 
-- **Symptom**: One-way audio after SIP Replaces / blind transfer / agent merge. Need to determine whether the B2BUA correctly issued the downstream re-INVITE (which it should generate to redirect media on the other leg).
-- **Evidence**: Method to apply — for the target dialog's Call-ID, count CSeq occurrences across ALL pcap files + SM syslog stream by method name. Normal Replaces-driven call: `1 INVITE × N, 1 ACK × M, 2 INVITE × K, 2 ACK × K, 3 BYE × P`. Failed propagation: `1 INVITE × N, 1 ACK × M, 2 BYE × P` (CSeq jumps from 1 INVITE directly to 2 BYE; no CSeq:2 INVITE in any direction throughout dialog lifetime). Reference: SR 1-23647477802 BC1 Call-ID `d6c229d25d5641f180920505695906f` showed CSeq:2 INVITE = 0; same-window normal call `de723eec5d5641f184c90505695906f` showed expected CSeq:2 INVITE at 10:12:02.945 (118ms after ACK).
-- **Root cause**: When B2BUA fails to issue re-INVITE on one leg after processing inbound Replaces, the CSeq sequence on the un-updated leg jumps from CSeq:1 INVITE (initial dialog) to CSeq:2 BYE (final teardown). The absence of intermediate CSeq:2 INVITE is structurally observable and definitive.
-- **Fix / workaround**: Always run this CSeq distribution test BEFORE concluding a re-INVITE was sent or hypothesizing other failure modes. Test is cheap (single grep + count) and rules out / confirms the B2BUA defect class quickly.
-- **Provenance**: SR 1-23647477802 | 2026-06-04
-- **Promotion**: promoted to references/sip-voice-quality.md#post-bridging-one-way-audio-invariants-sip-replaces--b2bua on 2026-06-04
+- **Symptom**: One-way audio with SIP signaling completing normally end-to-end. Tempting to start with signaling-level analysis (CSeq distribution, re-INVITE search, Replaces propagation, B2BUA state) — but these can produce misleading "smoking guns" that anchor the investigation on the wrong plane.
+- **Evidence**: For SR `1-23647477802`, initial June 4 investigation found `CSeq:2 INVITE = 0` on the SBC-facing dialog and inferred a CM B2BUA defect. June 8 RTP-level pcap analysis (time-correlated by SIP-SDP port + call window) showed the real signal: `CM→SBC = 208 RTP packets, SBC→CM = 0 RTP packets`. The unidirectional RTP gap localized the failure to the media plane upstream of CM — invalidating the CM B2BUA hypothesis entirely. Three-vendor escalation chain confirmed Avaya / SBC / SIP-SP all clean; root cause was inside the SIP-SP's internal network infrastructure.
+- **Root cause of diagnostic error**: Signaling-plane absence (no CSeq:2 INVITE) is consistent with multiple root causes — CM defect, SBC issue, intermediate SBC dropping the message, or simply that no re-INVITE was required in this call flow. RTP packet counters at the media boundary directly observe the actual failure plane and are not subject to inferential ambiguity.
+- **Fix / workaround**: For any SIP one-way audio investigation, run RTP packet-count analysis at the customer-edge SBC boundary FIRST, before any signaling-plane analysis. Filter by `(src=customer-AMS-IP, dst=SBC-IP)` and `(src=SBC-IP, dst=customer-AMS-IP)` over the exact call time window. Zero packets in one direction = media-plane failure (carrier network, SBC, transcoder), regardless of how signaling looks. Non-zero in both = signaling-plane diagnosis warranted.
+- **Provenance**: SR 1-23647477802 | 2026-06-04 → 2026-06-17 (closed)
+- **Promotion**: pending — awaiting 2nd case
 
-## L-003 — Same-Window Normal-Call Control Method Discriminates Per-Call Defects From Configuration
+## L-003 — "Signaling Normal + Media Absent" Is a Defined SBC Failure Class — Three Dominant Causes
 
-- **Symptom**: Intermittent defect (e.g. ~2% incidence) is hard to escalate without proving it's per-call rather than systemic (which would point to configuration, not engineering).
-- **Evidence**: For SR 1-23647477802, in the same 2-minute pcap window as failing BC1, found normal call `de723eec5d5641f184c90505695906f` that did exhibit the textbook CM B2BUA pattern (CSeq:1 INVITE → CSeq:2 INVITE 118ms after ACK → CSeq:3 BYE). Both calls used same CM (172.17.61.2), same SM (172.17.61.13), same B5000 (172.17.61.24), same campaign. Sole difference: which specific calls hit the defect.
-- **Root cause**: Demonstrates the system IS capable of correct behavior — so configuration is correct and the failure must be a per-call race condition or edge case in the B2BUA logic. Eliminates entire class of "system misconfigured" hypotheses.
-- **Fix / workaround**: Required step in any intermittent-defect investigation. Find a normal call in the same captured time window exhibiting the expected behavior. Use it as control evidence in PEA submission — separates "intermittent code defect" from "configuration drift" for the engineering team.
-- **Provenance**: SR 1-23647477802 | 2026-06-04
-- **Promotion**: promoted to references/sip-voice-quality.md#post-bridging-one-way-audio-invariants-sip-replaces--b2bua on 2026-06-04
+- **Symptom**: SIP call completes signaling (INVITE → 183 → 200 OK → ACK), call duration is typical, BYE arrives normally, but RTP is absent or unidirectional. No SIP-level error visible at any hop.
+- **Evidence**: From SR `1-23647477802` and field experience across global SIP-trunked deployments, this symptom class almost always traces to one of three SBC media-plane failures somewhere in the path. Signaling plane and media plane are independent on every SBC — signaling can complete cleanly while media never establishes.
+- **Root cause (three dominant patterns)**:
+  1. **RTP latching failure on an intermediate SBC** — SBC ignores SDP `c=`/`m=` and locks the destination from the first inbound RTP packet (symmetric RTP). If forward and reverse RTP traverse different peers, the reverse direction goes into a black hole. Most common worldwide cause of SIP one-way audio.
+  2. **Media-inactivity timer firing before first inbound RTP** — Carrier-grade SBCs (Oracle ACME, AudioCodes, Ribbon, Metaswitch) have configurable inactivity timers. If destination MNO is slow to start RTP (mobile setup jitter), the timer can tear down the media context while leaving signaling intact for the full call.
+  3. **Transcoder / DSP pool allocation race** — At a SIP↔mobile-network gateway, signaling allocates a logical media path but the transcoder pool fails to assign a DSP under load. No transcoded audio in either direction; signaling never backs out.
+- **Fix / workaround**: When engaging an SBC vendor or carrier on this symptom, ask binary diagnostic questions per cause: (a) `show media-session` state for the affected Call-IDs, (b) RTP packet counters per media interface for the call window, (c) media-inactivity timer value, (d) RTP latching mode (symmetric / auto / pinned), (e) transcoder pool utilization at call timestamps, (f) SBC-edge pcap on both ingress and egress interfaces. Any competent NOC can produce these in 30 minutes; refusal to do so is a process problem, not a technical one — escalate.
+- **Provenance**: SR 1-23647477802 | 2026-06-04 → 2026-06-17 (closed) + global pattern from prior SIP-migration cases
+- **Promotion**: pending — strong candidate for promotion to references/sip-voice-quality.md after 2nd field case
+
+## L-004 — APC (ISDN-PRI) vs POM (SIP) 0% / ~2% Incidence Asymmetry Is Structural, Not a POM Defect
+
+- **Symptom**: Customer escalates "the old APC system never had this problem; why does POM have it?" — risk of management drawing the wrong conclusion that the SIP migration was a strategic mistake.
+- **Evidence**: TDM (ISDN-PRI) is structurally immune to the three SBC media-plane failure modes documented in L-003 because it has no separate, droppable media plane — voice is a reserved DS0 timeslot established at call setup. There is no per-packet routing, no RTP latching, no media-inactivity timer, no transcoder pool race. Carrier-side anti-fraud and call-attestation systems operate on packet metadata; TDM has no packet metadata to inspect.
+- **Root cause of the asymmetry**: APC's 0% comes from constraint (no IP-network surface area), not from superior reliability. POM's ~2% comes from exposure (every IP-layer decision point is a potential failure surface), not from inferior reliability. The two products operate in fundamentally different failure domains.
+- **Fix / workaround / framing for the customer**:
+  - APC and POM are not directly comparable on reliability metrics — the IP-network failure modes that POM is exposed to do not exist on TDM by design.
+  - Every Tier-1 enterprise SIP migration globally has hit the same tuning curve in the first 6–12 months. Most reach < 0.1% after carrier-side audit completes.
+  - The 2% is a tunable parameter (route pinning, trunk whitelisting, carrier engagement), not a stable equilibrium.
+  - TDM is a sunset technology — NTT Group and most worldwide carriers have announced TDM end-of-service dates.
+- **Provenance**: SR 1-23647477802 | 2026-06-17 (closed)
+- **Promotion**: pending — awaiting 2nd field case raising the same comparison
