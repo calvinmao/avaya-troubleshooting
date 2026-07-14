@@ -1,6 +1,6 @@
 # avaya-troubleshooting
 
-[![knowledge-lint](https://github.com/hmao911/avaya-troubleshooting/actions/workflows/knowledge-lint.yml/badge.svg)](https://github.com/hmao911/avaya-troubleshooting/actions/workflows/knowledge-lint.yml)
+[![knowledge-lint](https://github.com/calvinmao/avaya-troubleshooting/actions/workflows/knowledge-lint.yml/badge.svg)](https://github.com/calvinmao/avaya-troubleshooting/actions/workflows/knowledge-lint.yml)
 
 Senior Avaya UC & CC troubleshooting plugin for Claude Code. Covers AES, JTAPI, TSAPI, CSTA, DMCC, AACC, Oceana, POM, Recording, WFO, Analytics, SIP, certificates, digital channels, IP Office, and security vulnerability assessment.
 
