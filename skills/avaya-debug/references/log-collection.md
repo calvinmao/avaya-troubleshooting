@@ -1,12 +1,22 @@
-# Log Collection Procedures Reference
-<!--
-scope: Avaya log collection (getlogs, spi.log, TSAPI/DMCC trace), server health, SNMP monitoring, auto-remediation
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: getlogs syntax across AES/POM versions, SNMP enterprise MIB OIDs, log file paths per version
-related_docs: linux-server.md, aes-cti-jtapi.md, lessons/log-collection.md
--->
+---
+title: "Log Collection Procedures Reference"
+layer: L4
+scope: "Avaya log collection (getlogs, spi.log, TSAPI/DMCC trace), server health, SNMP monitoring, auto-remediation"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "getlogs syntax across AES/POM versions"
+  - "SNMP enterprise MIB OIDs"
+  - "log file paths per version"
+related_docs:
+  - "linux-server.md"
+  - "aes-cti-jtapi.md"
+  - "lessons/log-collection.md"
+---
 
+# Log Collection Procedures Reference
 
 
 Comprehensive log paths, enable/disable procedures, and capture methods for AES, CMS, AAEP/POM, and WFO/ACR. Use this reference whenever you need to instruct a customer or engineer on which logs to collect and how.

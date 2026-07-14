@@ -1,12 +1,21 @@
-# Network Infrastructure Troubleshooting Reference
-<!--
-scope: TCP/IP, DNS, routing, firewall, packet capture, QoS/DSCP, VLAN, MTU for Avaya deployments
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: iptables vs nftables syntax on newer RHEL, conntrack default limits per kernel version
-related_docs: sip-voice-quality.md, cloud-infrastructure.md, lessons/network-infrastructure.md
--->
+---
+title: "Network Infrastructure Troubleshooting Reference"
+layer: L4
+scope: "TCP/IP, DNS, routing, firewall, packet capture, QoS/DSCP, VLAN, MTU for Avaya deployments"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "iptables vs nftables syntax on newer RHEL"
+  - "conntrack default limits per kernel version"
+related_docs:
+  - "sip-voice-quality.md"
+  - "cloud-infrastructure.md"
+  - "lessons/network-infrastructure.md"
+---
 
+# Network Infrastructure Troubleshooting Reference
 
 
 Diagnostic patterns for network layers affecting Avaya Aura deployments: TCP/IP

@@ -1,12 +1,22 @@
-# Recording / ACRA / WFO (Verint) Troubleshooting Reference
-<!--
-scope: ACRA, WFO/WFE (Verint), WebLogic, RIS, BatchExtender, pause/resume, recording loss
-last_reviewed: 2026-06-03
-owner: avaya-debug skill
-staleness_risks: Verint product versioning, WebLogic heap defaults, SQL Server JDBC driver versions
-related_docs: aes-cti-jtapi.md (JVM Prometheus rules), linux-server.md, lessons/recording-wfo.md
--->
+---
+title: "Recording / ACRA / WFO (Verint) Troubleshooting Reference"
+layer: L4
+scope: "ACRA, WFO/WFE (Verint), WebLogic, RIS, BatchExtender, pause/resume, recording loss"
+maturity: canonical
+applicable_versions: [TBD]
+last_reviewed: "2026-06-03"
+owner: "avaya-debug skill"
+staleness_risks:
+  - "Verint product versioning"
+  - "WebLogic heap defaults"
+  - "SQL Server JDBC driver versions"
+related_docs:
+  - "aes-cti-jtapi.md (JVM Prometheus rules)"
+  - "linux-server.md"
+  - "lessons/recording-wfo.md"
+---
 
+# Recording / ACRA / WFO (Verint) Troubleshooting Reference
 
 
 ## Table of Contents
