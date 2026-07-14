@@ -1,0 +1,38 @@
+name: eval-full (LLM-scored, manual)
+
+# Mode B evals require an Anthropic API key and consume tokens.
+# Trigger manually from the Actions tab when you want to run OQ-NNN
+# scoring against the current knowledge base state.
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Optional: restrict to one domain (e.g. aes-cti-jtapi)'
+        required: false
+        default: ''
+
+jobs:
+  llm-scored-evals:
+    name: OQ-NNN output-quality scoring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install PyYAML anthropic
+
+      - name: Run output-quality evals (mode B)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "${{ github.event.inputs.domain }}" ]; then
+            python3 scripts/run_evals.py --mode b --domain=${{ github.event.inputs.domain }}
+          else
+            python3 scripts/run_evals.py --mode b
+          fi

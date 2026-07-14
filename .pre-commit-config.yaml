@@ -1,0 +1,26 @@
+# Pre-commit hook config for avaya-troubleshooting.
+#
+# Install once:
+#     pip install pre-commit
+#     pre-commit install
+#
+# Then every `git commit` will run the KB lint locally before allowing
+# the commit to complete. Bypass with `git commit --no-verify` if needed
+# (not recommended — the same lint runs in CI on push).
+
+repos:
+  - repo: local
+    hooks:
+      - id: knowledge-lint-metadata
+        name: KB frontmatter schema lint
+        entry: python3 scripts/lint_metadata.py
+        language: system
+        pass_filenames: false
+        files: ^(skills/avaya-debug/(lessons|references)/.*\.md|scripts/lint_metadata\.py)$
+
+      - id: knowledge-evals-coverage
+        name: activation.md coverage check (offline)
+        entry: python3 scripts/run_evals.py --mode a
+        language: system
+        pass_filenames: false
+        files: ^(skills/avaya-debug/SKILL\.md|evals/activation\.md|scripts/run_evals\.py)$
