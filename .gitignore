@@ -1,0 +1,12 @@
+# Obsidian vault state (not part of plugin distribution)
+.obsidian/
+.trash/
+
+# Working files not part of the plugin
+slide-*.png
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
