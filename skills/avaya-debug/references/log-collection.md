@@ -182,6 +182,12 @@ OAM → **Maintenance → Service Controller**
 
 ## CMS Log Collection
 
+For SPI message decoding and complete paired-call analysis, use [SPI - CM/CMS Measurement Reporting Protocol](spi-protocol.md). The CMS collection guidance below remains scoped to log capture.
+
+For a CMS/CM reporting discrepancy, follow [Workflow 24](contact-center.md#cms-r21-reporting-and-spi-diagnostics). Capture the same bounded reproduction window in CM MST MIS measurements and CMS `/cms/pbx/acdN/spi.log`, with `spi.err` and `xln.log` as applicable. Record the exact report/field, ACD/trunk identifiers, call/ITN changes, screenshot timestamps and time zones; preserve rotated files and verify coverage before drawing conclusions. CMS collection uses the `mis`/SPI measurement path; a CDR-link test does not validate it.
+
+The path and enable recipes below are existing release-dependent guidance, not newly validated by the R21 PDFs. Confirm the installed-release/support-approved enable and stop syntax; use a short scoped capture and confirm logging has stopped.
+
 ### 1. General System and Process Logs
 
 | Log | Path | Description |
@@ -256,18 +262,15 @@ tail -f /var/log/messages         # Watch OS messages
 ```
 
 **Enable link trace:**
+
+The link-trace command below is an existing enable example, not a complete start/stop procedure validated by the supplied PDFs. Obtain the installed-release/support-approved stop command before enabling it; do not assume `spilog -all` stops a separately enabled link trace.
+
 ```bash
 /cms/bin/lnktrace <acd_number> spi on
 ```
 
 **Bundle logs for escalation:**
-```bash
-# Bundle specific ACD data + error logs
-find cms/pbx/acd1 usr/elog -print | cpio -ocvdumB >/dev/scsi/qtape1
-
-# Bundle crash dumps
-tar cvf /storage/cms_crashfiles.tar unix.X vmcore.X dmesg.out rpm_list.out messages
-```
+Use the installed-release/support-approved file-archive procedure. Preserve the relevant ACD directory's `spi.log`, `spi.err` and `xln.log` as applicable, together with the corresponding CM MST MIS capture. Include the reproduction window and time zones, retain rotated files, verify sent/received capture coverage, and record file hashes. Preserve the original files; use a file-based bundle rather than a prescribed tape-device write. Include crash evidence only when relevant to the reported issue.
 
 ---
 

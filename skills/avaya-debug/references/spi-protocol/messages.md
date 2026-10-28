@@ -1,0 +1,200 @@
+---
+title: "SPI complete versioned message index"
+layer: L4
+scope: "All 180 indexed source messages; direction, opcode, section and original page ranges."
+maturity: canonical
+applicable_versions: ["Dated supplied SPI documents; verify current product applicability"]
+last_reviewed: "2026-10-28"
+owner: "Avaya domain reference maintainers"
+staleness_risks: ["Source transcription is not graphical layout", "Historical product and protocol applicability"]
+related_docs: []
+---
+
+# All versioned SPI messages
+
+[Library index](index.md) | [Coverage](coverage.md)
+
+This is the complete 180-entry alphabetic source message index, cross-checked against the 180-entry opcode index. It is a locator, not a substitute for full field layouts or shared rules. Direction and negotiated language are part of decoding; an opcode is not a globally unique message identity.
+
+| Message | Direction | Opcode | Section | Definition pages | Source text |
+|---|---|---|---|---|---|
+| `APARMS7` | adjunct_to_switch | `0x28` | 3.3.11.1 | 72-72 | [p.72](syntax-2015-pages-061-080.md#pdf-page-072) |
+| `APARMS24` | adjunct_to_switch | `0x3f` | 3.3.11.2 | 72-72 | [p.72](syntax-2015-pages-061-080.md#pdf-page-072) |
+| `CHGNAM20` | adjunct_to_switch | `0x32` | 3.3.28.1 | 126-127 | [p.126](syntax-2015-pages-121-140.md#pdf-page-126) |
+| `CHGNAM24` | adjunct_to_switch | `0x41` | 3.3.28.2 | 128-129 | [p.128](syntax-2015-pages-121-140.md#pdf-page-128) |
+| `CHGVDNSK8` | adjunct_to_switch | `0x2e` | 3.3.18.1 | 87-87 | [p.87](syntax-2015-pages-081-100.md#pdf-page-087) |
+| `CHGVDNSK23` | adjunct_to_switch | `0x3a` | 3.3.18.2 | 87-87 | [p.87](syntax-2015-pages-081-100.md#pdf-page-087) |
+| `CHGVEC20` | adjunct_to_switch | `0x33` | 3.3.22.1 | 115-115 | [p.115](syntax-2015-pages-101-120.md#pdf-page-115) |
+| `CHGVEC24` | adjunct_to_switch | `0x44` | 3.3.22.2 | 116-116 | [p.116](syntax-2015-pages-101-120.md#pdf-page-116) |
+| `CPERROR7` | adjunct_to_switch | `0x2a` | 3.4.44.1 | 238-238 | [p.238](syntax-2015-pages-221-240.md#pdf-page-238) |
+| `CPERROR24` | adjunct_to_switch | `0x43` | 3.4.44.2 | 238-238 | [p.238](syntax-2015-pages-221-240.md#pdf-page-238) |
+| `MVAGSTFD21` | adjunct_to_switch | `0x35` | 3.3.10.1 | 69-69 | [p.69](syntax-2015-pages-061-080.md#pdf-page-069) |
+| `MVAGSTFD23` | adjunct_to_switch | `0x38` | 3.3.10.2 | 70-70 | [p.70](syntax-2015-pages-061-080.md#pdf-page-070) |
+| `MVAGSTFD24` | adjunct_to_switch | `0x3e` | 3.3.10.3 | 71-71 | [p.71](syntax-2015-pages-061-080.md#pdf-page-071) |
+| `MVVDN9` | adjunct_to_switch | `0x2f` | 3.3.17.1 | 86-86 | [p.86](syntax-2015-pages-081-100.md#pdf-page-086) |
+| `MVVDN23` | adjunct_to_switch | `0x3c` | 3.3.17.2 | 86-86 | [p.86](syntax-2015-pages-081-100.md#pdf-page-086) |
+| `NOP` | adjunct_to_switch | `0x0b` | 3.5.1 | 239-239 | [p.239](syntax-2015-pages-221-240.md#pdf-page-239) |
+| `RAUDIT` | adjunct_to_switch | `0x08` | 3.4.33.1 | 211-211 | [p.211](syntax-2015-pages-201-220.md#pdf-page-211) |
+| `RAUDIT24` | adjunct_to_switch | `0x42` | 3.4.33.2 | 212-212 | [p.212](syntax-2015-pages-201-220.md#pdf-page-212) |
+| `RCODENAM20` | adjunct_to_switch | `0x31` | 3.3.27 | 125-125 | [p.125](syntax-2015-pages-121-140.md#pdf-page-125) |
+| `REQLIST5` | adjunct_to_switch | `0x23` | 3.3.23 | 117-117 | [p.117](syntax-2015-pages-101-120.md#pdf-page-117) |
+| `REQNAM20` | adjunct_to_switch | `0x30` | 3.3.25 | 119-119 | [p.119](syntax-2015-pages-101-120.md#pdf-page-119) |
+| `RFTB` | adjunct_to_switch | `0x06` | 3.2.7 | 40-40 | [p.40](syntax-2015-pages-021-040.md#pdf-page-040) |
+| `RLTB` | adjunct_to_switch | `0x0c` | 3.2.8 | 40-40 | [p.40](syntax-2015-pages-021-040.md#pdf-page-040) |
+| `RTCS21` | adjunct_to_switch | `0x34` | 3.2.1.1 | 32-32 | [p.32](syntax-2015-pages-021-040.md#pdf-page-032) |
+| `RTCS23` | adjunct_to_switch | `0x37` | 3.2.1.2 | 32-32 | [p.32](syntax-2015-pages-021-040.md#pdf-page-032) |
+| `RTCS24` | adjunct_to_switch | `0x3d` | 3.2.1.3 | 33-33 | [p.33](syntax-2015-pages-021-040.md#pdf-page-033) |
+| `SKILLADD8` | adjunct_to_switch | `0x2d` | 3.3.13.1 | 78-78 | [p.78](syntax-2015-pages-061-080.md#pdf-page-078) |
+| `SKILLADD23` | adjunct_to_switch | `0x39` | 3.3.13.2 | 79-79 | [p.79](syntax-2015-pages-061-080.md#pdf-page-079) |
+| `SKILLADD24` | adjunct_to_switch | `0x40` | 3.3.13.3 | 80-81 | [p.80](syntax-2015-pages-061-080.md#pdf-page-080) |
+| `USERID21` | adjunct_to_switch | `0x36` | 3.3.32 | 136-136 | [p.136](syntax-2015-pages-121-140.md#pdf-page-136) |
+| `VPARMS` | adjunct_to_switch | `0x15` | 3.3.19 | 88-88 | [p.88](syntax-2015-pages-081-100.md#pdf-page-088) |
+| `AUDAUX24` | switch_to_adjunct | `0x58` | 3.4.38.3 | 227-227 | [p.227](syntax-2015-pages-221-240.md#pdf-page-227) |
+| `ACD20` | switch_to_adjunct | `0xd1` | 3.4.5.1 | 151-151 | [p.151](syntax-2015-pages-141-160.md#pdf-page-151) |
+| `AUDAVAIL22` | switch_to_adjunct | `0x02` | 3.4.35.1 | 216-216 | [p.216](syntax-2015-pages-201-220.md#pdf-page-216) |
+| `ACD24` | switch_to_adjunct | `0x3b` | 3.4.5.2 | 152-152 | [p.152](syntax-2015-pages-141-160.md#pdf-page-152) |
+| `AUDAVAIL23` | switch_to_adjunct | `0x08` | 3.4.35.2 | 217-217 | [p.217](syntax-2015-pages-201-220.md#pdf-page-217) |
+| `ACW22` | switch_to_adjunct | `0xff` | 3.4.6.1 | 153-153 | [p.153](syntax-2015-pages-141-160.md#pdf-page-153) |
+| `AUDAVAIL24` | switch_to_adjunct | `0x55` | 3.4.35.3 | 218-218 | [p.218](syntax-2015-pages-201-220.md#pdf-page-218) |
+| `ACW24` | switch_to_adjunct | `0x3c` | 3.4.6.2 | 154-154 | [p.154](syntax-2015-pages-141-160.md#pdf-page-154) |
+| `AUDOTHER22` | switch_to_adjunct | `0xfb` | 3.4.39.1 | 228-228 | [p.228](syntax-2015-pages-221-240.md#pdf-page-228) |
+| `ADMLIST20` | switch_to_adjunct | `0xc8` | 3.3.24 | 118-118 | [p.118](syntax-2015-pages-101-120.md#pdf-page-118) |
+| `AUDOTHER24` | switch_to_adjunct | `0x59` | 3.4.39.2 | 229-229 | [p.229](syntax-2015-pages-221-240.md#pdf-page-229) |
+| `ADMNAM20` | switch_to_adjunct | `0xc9` | 3.3.26.1 | 120-122 | [p.120](syntax-2015-pages-101-120.md#pdf-page-120) |
+| `AUDUNSTF20` | switch_to_adjunct | `0xf4` | 3.4.40.1 | 230-230 | [p.230](syntax-2015-pages-221-240.md#pdf-page-230) |
+| `ADMNAM24` | switch_to_adjunct | `0x2b` | 3.3.26.2 | 123-124 | [p.123](syntax-2015-pages-121-140.md#pdf-page-123) |
+| `AUDUNSTF24` | switch_to_adjunct | `0x5a` | 3.4.40.2 | 230-230 | [p.230](syntax-2015-pages-221-240.md#pdf-page-230) |
+| `AEVENT20` | switch_to_adjunct | `0xd6` | 3.4.10.1 | 165-165 | [p.165](syntax-2015-pages-161-180.md#pdf-page-165) |
+| `AUX22` | switch_to_adjunct | `0x03` | 3.4.7.1 | 155-155 | [p.155](syntax-2015-pages-141-160.md#pdf-page-155) |
+| `AEVENT24` | switch_to_adjunct | `0x40` | 3.4.10.2 | 166-166 | [p.166](syntax-2015-pages-161-180.md#pdf-page-166) |
+| `AUX23` | switch_to_adjunct | `0x0f` | 3.4.7.2 | 156-156 | [p.156](syntax-2015-pages-141-160.md#pdf-page-156) |
+| `AGENTSK20` | switch_to_adjunct | `0xc2` | 3.3.12.1 | 73-73 | [p.73](syntax-2015-pages-061-080.md#pdf-page-073) |
+| `AUX24` | switch_to_adjunct | `0x3d` | 3.4.7.3 | 157-157 | [p.157](syntax-2015-pages-141-160.md#pdf-page-157) |
+| `AGENTSK23` | switch_to_adjunct | `0x04` | 3.3.12.2 | 74-75 | [p.74](syntax-2015-pages-061-080.md#pdf-page-074) |
+| `AVAIL22` | switch_to_adjunct | `0x01` | 3.4.4.1 | 148-148 | [p.148](syntax-2015-pages-141-160.md#pdf-page-148) |
+| `AGENTSK24` | switch_to_adjunct | `0x37` | 3.3.12.3 | 76-77 | [p.76](syntax-2015-pages-061-080.md#pdf-page-076) |
+| `AVAIL23` | switch_to_adjunct | `0x0e` | 3.4.4.2 | 149-149 | [p.149](syntax-2015-pages-141-160.md#pdf-page-149) |
+| `AGMOVE20` | switch_to_adjunct | `0xf8` | 3.3.9 | 67-67 | [p.67](syntax-2015-pages-061-080.md#pdf-page-067) |
+| `AVAIL24` | switch_to_adjunct | `0x3a` | 3.4.4.3 | 150-150 | [p.150](syntax-2015-pages-141-160.md#pdf-page-150) |
+| `ALOGOFF20` | switch_to_adjunct | `0xcf` | 3.4.3.1 | 147-147 | [p.147](syntax-2015-pages-141-160.md#pdf-page-147) |
+| `BUSYOUT20` | switch_to_adjunct | `0xba` | 3.3.1 | 54-54 | [p.54](syntax-2015-pages-041-060.md#pdf-page-054) |
+| `ALOGOFF24` | switch_to_adjunct | `0x39` | 3.4.3.2 | 147-147 | [p.147](syntax-2015-pages-141-160.md#pdf-page-147) |
+| `COMP20` | switch_to_adjunct | `0xe6` | 3.4.26.1 | 202-202 | [p.202](syntax-2015-pages-201-220.md#pdf-page-202) |
+| `ALOGON20` | switch_to_adjunct | `0xce` | 3.4.2.1 | 139-140 | [p.139](syntax-2015-pages-121-140.md#pdf-page-139) |
+| `COMP24` | switch_to_adjunct | `0x4f` | 3.4.26.2 | 202-202 | [p.202](syntax-2015-pages-201-220.md#pdf-page-202) |
+| `ALOGON23` | switch_to_adjunct | `0x05` | 3.4.2.2 | 141-143 | [p.141](syntax-2015-pages-141-160.md#pdf-page-141) |
+| `CRCODE20` | switch_to_adjunct | `0xcc` | 3.3.31 | 134-135 | [p.134](syntax-2015-pages-121-140.md#pdf-page-134) |
+| `ALOGON24` | switch_to_adjunct | `0x28` | 3.4.2.3 | 144-146 | [p.144](syntax-2015-pages-141-160.md#pdf-page-144) |
+| `DABN22` | switch_to_adjunct | `0xfc` | 3.4.16.1 | 181-181 | [p.181](syntax-2015-pages-181-200.md#pdf-page-181) |
+| `ARAGENT20` | switch_to_adjunct | `0xbd` | 3.3.4.1 | 58-58 | [p.58](syntax-2015-pages-041-060.md#pdf-page-058) |
+| `DABN24` | switch_to_adjunct | `0x46` | 3.4.16.2 | 182-182 | [p.182](syntax-2015-pages-181-200.md#pdf-page-182) |
+| `ARAGENT24` | switch_to_adjunct | `0x33` | 3.3.4.2 | 59-59 | [p.59](syntax-2015-pages-041-060.md#pdf-page-059) |
+| `DADFWD20` | switch_to_adjunct | `0xdd` | 3.4.17.1 | 183-183 | [p.183](syntax-2015-pages-181-200.md#pdf-page-183) |
+| `AROUTE20` | switch_to_adjunct | `0xe8` | 3.4.28.1 | 204-204 | [p.204](syntax-2015-pages-201-220.md#pdf-page-204) |
+| `DADFWD24` | switch_to_adjunct | `0x2a` | 3.4.17.2 | 184-184 | [p.184](syntax-2015-pages-181-200.md#pdf-page-184) |
+| `AROUTE24` | switch_to_adjunct | `0x51` | 3.4.28.2 | 204-204 | [p.204](syntax-2015-pages-201-220.md#pdf-page-204) |
+| `DAQUEUED20` | switch_to_adjunct | `0xda` | 3.4.14.1 | 175-175 | [p.175](syntax-2015-pages-161-180.md#pdf-page-175) |
+| `ARSPLIT20` | switch_to_adjunct | `0xbe` | 3.3.5.1 | 60-60 | [p.60](syntax-2015-pages-041-060.md#pdf-page-060) |
+| `DAQUEUED23` | switch_to_adjunct | `0x1d` | 3.4.14.2 | 176-176 | [p.176](syntax-2015-pages-161-180.md#pdf-page-176) |
+| `ARSPLIT23` | switch_to_adjunct | `0x13` | 3.3.5.2 | 60-60 | [p.60](syntax-2015-pages-041-060.md#pdf-page-060) |
+| `DAQUEUED24` | switch_to_adjunct | `0x44` | 3.4.14.3 | 177-177 | [p.177](syntax-2015-pages-161-180.md#pdf-page-177) |
+| `ARSPLIT24` | switch_to_adjunct | `0x34` | 3.3.5.3 | 61-61 | [p.61](syntax-2015-pages-061-080.md#pdf-page-061) |
+| `DCON22` | switch_to_adjunct | `0xfd` | 3.4.15.1 | 178-178 | [p.178](syntax-2015-pages-161-180.md#pdf-page-178) |
+| `ARTGVDN20` | switch_to_adjunct | `0xc0` | 3.3.7.1 | 64-64 | [p.64](syntax-2015-pages-061-080.md#pdf-page-064) |
+| `DCON23` | switch_to_adjunct | `0x0b` | 3.4.15.2 | 179-179 | [p.179](syntax-2015-pages-161-180.md#pdf-page-179) |
+| `ARTGVDN24` | switch_to_adjunct | `0x36` | 3.3.7.2 | 64-64 | [p.64](syntax-2015-pages-061-080.md#pdf-page-064) |
+| `DCON24` | switch_to_adjunct | `0x45` | 3.4.15.3 | 180-180 | [p.180](syntax-2015-pages-161-180.md#pdf-page-180) |
+| `ARTKGRP20` | switch_to_adjunct | `0xbf` | 3.3.6.1 | 62-62 | [p.62](syntax-2015-pages-061-080.md#pdf-page-062) |
+| `DFWD20` | switch_to_adjunct | `0xde` | 3.4.18.1 | 185-186 | [p.185](syntax-2015-pages-181-200.md#pdf-page-185) |
+| `ARTKGRP23` | switch_to_adjunct | `0x14` | 3.3.6.2 | 62-62 | [p.62](syntax-2015-pages-061-080.md#pdf-page-062) |
+| `DFWD23` | switch_to_adjunct | `0x0c` | 3.4.18.2 | 187-188 | [p.187](syntax-2015-pages-181-200.md#pdf-page-187) |
+| `ARTKGRP24` | switch_to_adjunct | `0x35` | 3.3.6.3 | 63-63 | [p.63](syntax-2015-pages-061-080.md#pdf-page-063) |
+| `DFWD24` | switch_to_adjunct | `0x47` | 3.4.18.3 | 189-190 | [p.189](syntax-2015-pages-181-200.md#pdf-page-189) |
+| `ARTRUNK20` | switch_to_adjunct | `0xc1` | 3.3.8.1 | 65-65 | [p.65](syntax-2015-pages-061-080.md#pdf-page-065) |
+| `DIGITS20` | switch_to_adjunct | `0xd5` | 3.4.9.1 | 160-161 | [p.160](syntax-2015-pages-141-160.md#pdf-page-160) |
+| `ARTRUNK24` | switch_to_adjunct | `0x26` | 3.3.8.2 | 66-66 | [p.66](syntax-2015-pages-061-080.md#pdf-page-066) |
+| `DIGITS24` | switch_to_adjunct | `0x3f` | 3.4.9.2 | 162-163 | [p.162](syntax-2015-pages-161-180.md#pdf-page-162) |
+| `ARVDN20` | switch_to_adjunct | `0xbc` | 3.3.3.1 | 55-55 | [p.55](syntax-2015-pages-041-060.md#pdf-page-055) |
+| `DNEVENT20` | switch_to_adjunct | `0xeb` | 3.4.31.1 | 208-208 | [p.208](syntax-2015-pages-201-220.md#pdf-page-208) |
+| `ARVDN23` | switch_to_adjunct | `0x12` | 3.3.3.2 | 56-56 | [p.56](syntax-2015-pages-041-060.md#pdf-page-056) |
+| `DNEVENT24` | switch_to_adjunct | `0x53` | 3.4.31.2 | 209-209 | [p.209](syntax-2015-pages-201-220.md#pdf-page-209) |
+| `ARVDN24` | switch_to_adjunct | `0x32` | 3.3.3.3 | 57-57 | [p.57](syntax-2015-pages-041-060.md#pdf-page-057) |
+| `EWTAUDIT20` | switch_to_adjunct | `0xf5` | 3.4.41.1 | 231-231 | [p.231](syntax-2015-pages-221-240.md#pdf-page-231) |
+| `ASA20` | switch_to_adjunct | `0xea` | 3.4.30.1 | 207-207 | [p.207](syntax-2015-pages-201-220.md#pdf-page-207) |
+| `EWTAUDIT23` | switch_to_adjunct | `0x22` | 3.4.41.2 | 232-232 | [p.232](syntax-2015-pages-221-240.md#pdf-page-232) |
+| `ASA23` | switch_to_adjunct | `0x20` | 3.4.30.2 | 207-207 | [p.207](syntax-2015-pages-201-220.md#pdf-page-207) |
+| `FBUSY20` | switch_to_adjunct | `0xe0` | 3.4.20.1 | 192-192 | [p.192](syntax-2015-pages-181-200.md#pdf-page-192) |
+| `AUDACD20` | switch_to_adjunct | `0xf0` | 3.4.36.1 | 219-219 | [p.219](syntax-2015-pages-201-220.md#pdf-page-219) |
+| `FBUSY24` | switch_to_adjunct | `0x49` | 3.4.20.2 | 192-192 | [p.192](syntax-2015-pages-181-200.md#pdf-page-192) |
+| `AUDACD23` | switch_to_adjunct | `0x06` | 3.4.36.2 | 220-220 | [p.220](syntax-2015-pages-201-220.md#pdf-page-220) |
+| `FDISC20` | switch_to_adjunct | `0xe3` | 3.4.23.1 | 195-195 | [p.195](syntax-2015-pages-181-200.md#pdf-page-195) |
+| `AUDACD24` | switch_to_adjunct | `0x56` | 3.4.36.3 | 221-221 | [p.221](syntax-2015-pages-221-240.md#pdf-page-221) |
+| `FDISC24` | switch_to_adjunct | `0x4c` | 3.4.23.2 | 196-196 | [p.196](syntax-2015-pages-181-200.md#pdf-page-196) |
+| `AUDACW20` | switch_to_adjunct | `0xf1` | 3.4.37.1 | 222-222 | [p.222](syntax-2015-pages-221-240.md#pdf-page-222) |
+| `HOLD20` | switch_to_adjunct | `0xe4` | 3.4.24.1 | 197-197 | [p.197](syntax-2015-pages-181-200.md#pdf-page-197) |
+| `AUDACW23` | switch_to_adjunct | `0x07` | 3.4.37.2 | 223-223 | [p.223](syntax-2015-pages-221-240.md#pdf-page-223) |
+| `HOLD24` | switch_to_adjunct | `0x4d` | 3.4.24.2 | 198-198 | [p.198](syntax-2015-pages-181-200.md#pdf-page-198) |
+| `AUDACW24` | switch_to_adjunct | `0x57` | 3.4.37.3 | 224-224 | [p.224](syntax-2015-pages-221-240.md#pdf-page-224) |
+| `IDLE20` | switch_to_adjunct | `0xd7` | 3.4.11.1 | 167-167 | [p.167](syntax-2015-pages-161-180.md#pdf-page-167) |
+| `AUDAUX20` | switch_to_adjunct | `0xf2` | 3.4.38.1 | 225-225 | [p.225](syntax-2015-pages-221-240.md#pdf-page-225) |
+| `IDLE23` | switch_to_adjunct | `0x1b` | 3.4.11.2 | 168-168 | [p.168](syntax-2015-pages-161-180.md#pdf-page-168) |
+| `AUDAUX23` | switch_to_adjunct | `0x10` | 3.4.38.2 | 226-226 | [p.226](syntax-2015-pages-221-240.md#pdf-page-226) |
+| `IDLE24` | switch_to_adjunct | `0x41` | 3.4.11.3 | 169-169 | [p.169](syntax-2015-pages-161-180.md#pdf-page-169) |
+| `LOOKAH20` | switch_to_adjunct | `0xe7` | 3.4.27.1 | 203-203 | [p.203](syntax-2015-pages-201-220.md#pdf-page-203) |
+| `LOOKAH24` | switch_to_adjunct | `0x50` | 3.4.27.2 | 203-203 | [p.203](syntax-2015-pages-201-220.md#pdf-page-203) |
+| `MBUSY20` | switch_to_adjunct | `0xdf` | 3.4.19.1 | 191-191 | [p.191](syntax-2015-pages-181-200.md#pdf-page-191) |
+| `XTKGRP24` | switch_to_adjunct | `0x30` | 3.2.14.2 | 49-49 | [p.49](syntax-2015-pages-041-060.md#pdf-page-049) |
+| `MBUSY24` | switch_to_adjunct | `0x48` | 3.4.19.2 | 191-191 | [p.191](syntax-2015-pages-181-200.md#pdf-page-191) |
+| `XTRUNK20` | switch_to_adjunct | `0xb9` | 3.2.16.1 | 51-51 | [p.51](syntax-2015-pages-041-060.md#pdf-page-051) |
+| `MODEVENT20` | switch_to_adjunct | `0xec` | 3.4.32 | 210-210 | [p.210](syntax-2015-pages-201-220.md#pdf-page-210) |
+| `XTRUNK24` | switch_to_adjunct | `0x25` | 3.2.16.2 | 52-52 | [p.52](syntax-2015-pages-041-060.md#pdf-page-052) |
+| `MVRCODE20` | switch_to_adjunct | `0xca` | 3.3.29 | 130-130 | [p.130](syntax-2015-pages-121-140.md#pdf-page-130) |
+| `XVDN20` | switch_to_adjunct | `0xb4` | 3.2.11.1 | 43-43 | [p.43](syntax-2015-pages-041-060.md#pdf-page-043) |
+| `OTHER22` | switch_to_adjunct | `0xfa` | 3.4.8.1 | 158-158 | [p.158](syntax-2015-pages-141-160.md#pdf-page-158) |
+| `XVDN23` | switch_to_adjunct | `0x11` | 3.2.11.2 | 44-44 | [p.44](syntax-2015-pages-041-060.md#pdf-page-044) |
+| `OTHER24` | switch_to_adjunct | `0x3e` | 3.4.8.2 | 159-159 | [p.159](syntax-2015-pages-141-160.md#pdf-page-159) |
+| `XVDN24` | switch_to_adjunct | `0x2d` | 3.2.11.3 | 45-45 | [p.45](syntax-2015-pages-041-060.md#pdf-page-045) |
+| `QUEUED20` | switch_to_adjunct | `0xd9` | 3.4.13.1 | 172-172 | [p.172](syntax-2015-pages-161-180.md#pdf-page-172) |
+| `QUEUED23` | switch_to_adjunct | `0x1c` | 3.4.13.2 | 173-173 | [p.173](syntax-2015-pages-161-180.md#pdf-page-173) |
+| `QUEUED24` | switch_to_adjunct | `0x43` | 3.4.13.3 | 174-174 | [p.174](syntax-2015-pages-161-180.md#pdf-page-174) |
+| `RCODE20` | switch_to_adjunct | `0xcb` | 3.3.30 | 131-133 | [p.131](syntax-2015-pages-121-140.md#pdf-page-131) |
+| `RECON20` | switch_to_adjunct | `0xe5` | 3.4.25.1 | 199-199 | [p.199](syntax-2015-pages-181-200.md#pdf-page-199) |
+| `RECON23` | switch_to_adjunct | `0x1e` | 3.4.25.2 | 200-200 | [p.200](syntax-2015-pages-181-200.md#pdf-page-200) |
+| `RECON24` | switch_to_adjunct | `0x4e` | 3.4.25.3 | 201-201 | [p.201](syntax-2015-pages-201-220.md#pdf-page-201) |
+| `RELBUSY20` | switch_to_adjunct | `0xbb` | 3.3.2 | 54-54 | [p.54](syntax-2015-pages-041-060.md#pdf-page-054) |
+| `SETUP22` | switch_to_adjunct | `0xfe` | 3.4.12.1 | 170-170 | [p.170](syntax-2015-pages-161-180.md#pdf-page-170) |
+| `SETUP24` | switch_to_adjunct | `0x42` | 3.4.12.2 | 171-171 | [p.171](syntax-2015-pages-161-180.md#pdf-page-171) |
+| `SKSTATE20` | switch_to_adjunct | `0xe9` | 3.4.29.1 | 205-205 | [p.205](syntax-2015-pages-201-220.md#pdf-page-205) |
+| `SKSTATE23` | switch_to_adjunct | `0x1f` | 3.4.29.2 | 206-206 | [p.206](syntax-2015-pages-201-220.md#pdf-page-206) |
+| `TAUDIT20` | switch_to_adjunct | `0xee` | 3.4.34.1 | 214-214 | [p.214](syntax-2015-pages-201-220.md#pdf-page-214) |
+| `TAUDIT24` | switch_to_adjunct | `0x54` | 3.4.34.2 | 215-215 | [p.215](syntax-2015-pages-201-220.md#pdf-page-215) |
+| `TGMOVE20` | switch_to_adjunct | `0xc3` | 3.3.14.1 | 82-82 | [p.82](syntax-2015-pages-081-100.md#pdf-page-082) |
+| `TGMOVE23` | switch_to_adjunct | `0x16` | 3.3.14.2 | 82-82 | [p.82](syntax-2015-pages-081-100.md#pdf-page-082) |
+| `TIME20` | switch_to_adjunct | `0xcd` | 3.4.1 | 137-137 | [p.137](syntax-2015-pages-121-140.md#pdf-page-137) |
+| `VAUDIT20` | switch_to_adjunct | `0xf6` | 3.4.42 | 233-233 | [p.233](syntax-2015-pages-221-240.md#pdf-page-233) |
+| `VDNMOVE20` | switch_to_adjunct | `0xc5` | 3.3.16.1 | 84-84 | [p.84](syntax-2015-pages-081-100.md#pdf-page-084) |
+| `VDNMOVE23` | switch_to_adjunct | `0x18` | 3.3.16.2 | 85-85 | [p.85](syntax-2015-pages-081-100.md#pdf-page-085) |
+| `VDNMOVE24` | switch_to_adjunct | `0x38` | 3.3.16.3 | 85-85 | [p.85](syntax-2015-pages-081-100.md#pdf-page-085) |
+| `VECTOR20` | switch_to_adjunct | `0xc6` | 3.3.20.1 | 90-90 | [p.90](syntax-2015-pages-081-100.md#pdf-page-090) |
+| `VECTOR24` | switch_to_adjunct | `0x52` | 3.3.20.2 | 91-91 | [p.91](syntax-2015-pages-081-100.md#pdf-page-091) |
+| `VSTART20` | switch_to_adjunct | `0xe1` | 3.4.21.1 | 193-193 | [p.193](syntax-2015-pages-181-200.md#pdf-page-193) |
+| `VSTART24` | switch_to_adjunct | `0x4a` | 3.4.21.2 | 193-193 | [p.193](syntax-2015-pages-181-200.md#pdf-page-193) |
+| `VSTOP20` | switch_to_adjunct | `0xe2` | 3.4.22.1 | 194-194 | [p.194](syntax-2015-pages-181-200.md#pdf-page-194) |
+| `VSTOP24` | switch_to_adjunct | `0x4b` | 3.4.22.2 | 194-194 | [p.194](syntax-2015-pages-181-200.md#pdf-page-194) |
+| `VTGMOVE20` | switch_to_adjunct | `0xc4` | 3.3.15 | 83-83 | [p.83](syntax-2015-pages-081-100.md#pdf-page-083) |
+| `XAGENT20` | switch_to_adjunct | `0xb6` | 3.2.13.1 | 47-47 | [p.47](syntax-2015-pages-041-060.md#pdf-page-047) |
+| `XAGENT24` | switch_to_adjunct | `0x2f` | 3.2.13.2 | 48-48 | [p.48](syntax-2015-pages-041-060.md#pdf-page-048) |
+| `XCLOSE20` | switch_to_adjunct | `0xb3` | 3.2.10 | 42-42 | [p.42](syntax-2015-pages-041-060.md#pdf-page-042) |
+| `XFAIL21` | switch_to_adjunct | `0xf9` | 3.2.3.1 | 34-34 | [p.34](syntax-2015-pages-021-040.md#pdf-page-034) |
+| `XFAIL23` | switch_to_adjunct | `0x0d` | 3.2.3.2 | 35-35 | [p.35](syntax-2015-pages-021-040.md#pdf-page-035) |
+| `XFAIL24` | switch_to_adjunct | `0x29` | 3.2.3.3 | 35-35 | [p.35](syntax-2015-pages-021-040.md#pdf-page-035) |
+| `XFER20` | switch_to_adjunct | `0xf7` | 3.4.43.1 | 234-235 | [p.234](syntax-2015-pages-221-240.md#pdf-page-234) |
+| `XFER24` | switch_to_adjunct | `0x5b` | 3.4.43.2 | 236-237 | [p.236](syntax-2015-pages-221-240.md#pdf-page-236) |
+| `XOPEN20` | switch_to_adjunct | `0xb2` | 3.2.9 | 41-41 | [p.41](syntax-2015-pages-041-060.md#pdf-page-041) |
+| `XSPLIT20` | switch_to_adjunct | `0xb5` | 3.2.12.1 | 46-46 | [p.46](syntax-2015-pages-041-060.md#pdf-page-046) |
+| `XSPLIT24` | switch_to_adjunct | `0x2e` | 3.2.12.2 | 46-46 | [p.46](syntax-2015-pages-041-060.md#pdf-page-046) |
+| `XSTAT20` | switch_to_adjunct | `0xb1` | 3.2.5.1 | 36-37 | [p.36](syntax-2015-pages-021-040.md#pdf-page-036) |
+| `XSTAT24` | switch_to_adjunct | `0x2c` | 3.2.5.2 | 38-38 | [p.38](syntax-2015-pages-021-040.md#pdf-page-038) |
+| `XTGVDN20` | switch_to_adjunct | `0xb8` | 3.2.15.1 | 50-50 | [p.50](syntax-2015-pages-041-060.md#pdf-page-050) |
+| `XTGVDN24` | switch_to_adjunct | `0x31` | 3.2.15.2 | 50-50 | [p.50](syntax-2015-pages-041-060.md#pdf-page-050) |
+| `XTKGRP20` | switch_to_adjunct | `0xb7` | 3.2.14.1 | 49-49 | [p.49](syntax-2015-pages-041-060.md#pdf-page-049) |

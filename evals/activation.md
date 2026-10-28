@@ -80,6 +80,16 @@ Present each prompt to the agent without prior context. Pass = skill activates a
 
 ---
 
+### SPI / Reporting Adjunct Protocol
+
+| ID | Prompt | Expected Reference | Notes |
+|----|--------|--------------------|-------|
+| A-080 | "Decode Avaya Switch / Reporting Adjunct SPI SETUP24, XFER24 RENAME and IDLE messages" | `spi-protocol.md` | Standalone protocol analysis |
+| A-081 | "CMS spi.log reports CPERROR after a trunk ITN rename; how do I correlate this with CM MST MIS?" | `spi-protocol.md` + `contact-center.md` + `log-collection.md` | Protocol, reporting and capture layers |
+| A-082 | "The Avaya SPI XSTAT language differs from our reporting adjunct release setting" | `spi-protocol.md` | Release/language verification |
+
+---
+
 ## Should-NOT-Trigger Cases
 
 These prompts should NOT activate the avaya-debug skill. The agent should handle them with general knowledge without loading Avaya reference files.
@@ -91,6 +101,7 @@ These prompts should NOT activate the avaya-debug skill. The agent should handle
 | N-003 | "Explain what a SIP INVITE message is" | Educational, not troubleshooting |
 | N-004 | "Review my Java code for style issues" | Code review, not Avaya fault |
 | N-005 | "How does Kubernetes work?" | Generic K8s, no Avaya context |
+| N-006 | "My STM32 SPI bus cannot read a flash chip; help check CPOL and CPHA" | Embedded Serial Peripheral Interface, not Avaya reporting adjunct SPI |
 
 ---
 

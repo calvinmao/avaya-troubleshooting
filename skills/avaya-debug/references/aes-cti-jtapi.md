@@ -539,6 +539,8 @@ Step 6 — Recommend Resolution
 
 ## Cross-Product Integration CM <-> AES
 
+For CM/CMS measurement reporting, use [SPI - CM/CMS Measurement Reporting Protocol](spi-protocol.md). CMS uses the `mis` reporting-adjunct path; the ASAI/AES CTI flow below supplies different evidence and does not replace the CMS-directed SPI sequence.
+
 ```
 Protocol:    ASAI over TCP
 AES Service: CTI Link Manager

@@ -31,6 +31,14 @@ Rows are ordered by frequency (most-common Avaya SR symptoms first).
 | "Recording duration wrong / missing" | control + config | `recording-wfo.md` | Correlate CM call duration vs ACRA recording metadata; check WebLogic GC pauses under load. |
 | "Intermittent one-way audio ~2% of calls" | media (structural) | `sip-voice-quality.md`, `contact-center.md` | **Extract carrier-side c= IP from PSTN-facing 183 SDP** for bad and good calls. Correlation, not signaling, is the anchor (per L-004 sip-voice-quality). |
 
+## SPI / reporting adjunct symptoms
+
+| Rough symptom | Class | Primary domain(s) | First diagnostic move |
+|---|---|---|---|
+| "Avaya SPI SETUP/XFER/IDLE sequence looks inconsistent" | reporting protocol | `spi-protocol.md` | Verify actual XSTAT language and map the ITNs before decoding the sequence. |
+| "CMS shows the old ITN idle while CM still has an occupied circuit" | reporting + facility mapping | `spi-protocol.md`, `contact-center.md` | Map xfer/dest facilities and the continuing call using complete paired CMS spi.log and CM MST MIS records. |
+| "CMS CPERROR or TAUDIT mismatch after a rename" | reporting protocol | `spi-protocol.md`, `log-collection.md` | Verify message and capture coverage; a protocol error or audit difference alone does not prove a code defect. |
+
 ## Login / auth / cert symptoms
 
 | Rough symptom | Class | Primary domain(s) | First diagnostic move |

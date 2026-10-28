@@ -29,7 +29,7 @@ related_docs:
 - [Contact Center Routing (Workflow 4)](#contact-center-routing)
 - [AEP / IVR / VoiceXML (Workflow 9)](#aep--ivr--voicexml)
 - [POM Campaign / Nail-up / Outbound (Workflow 18)](#pom-campaign--outbound)
-- [CMS Historical Report Discrepancies (Workflow 24)](#cms-historical-report-discrepancies)
+- [CMS R21 Reporting and SPI Diagnostics (Workflow 24)](#cms-r21-reporting-and-spi-diagnostics)
 - [AXP Workflow / API (Workflow 25)](#axp-workflow--api)
 - [AACC Agent Not Receiving Calls (Workflow 26)](#aacc-agent-not-receiving-calls)
 - [Contact Center Fault Patterns](#contact-center-fault-patterns)
@@ -52,7 +52,7 @@ related_docs:
 | **Proactive Outreach Manager (POM)** | Outbound campaign management | ASAI, SIP, REST | POM logs, campaign manager logs |
 | **Voice Portal (AVP)** | Legacy IVR | SIP, MRCP, HTTP | AVP application logs, call flow logs |
 | **Workforce Management (WFM)** | Agent scheduling, forecasting | REST, database | WFM application logs |
-| **Call Management System (CMS)** | Real-time/historical reporting | CMS API, ODBC | CMS reports, supervisor logs |
+| **Call Management System (CMS)** | Real-time/historical reporting | CM mis/SPI; ODBC/JDBC | CMS spi.log/spi.err; CM MST MIS; reports |
 | **AXP (Avaya Experience Platform)** | Cloud CCaaS platform | REST, SIP, WebSocket | AXP dashboard, VPMS page, SMMC logs |
 | **Proactive Contact (MTC)** | Legacy outbound dialer platform | ASAI, SIP | enserver logs, dialer process logs |
 
@@ -414,38 +414,77 @@ Step 8 — Proactive Contact (Legacy MTC) / Dialer Issues
 
 ---
 
-## CMS Historical Report Discrepancies
+## CMS R21 Reporting and SPI Diagnostics
 
-**Workflow 24: CMS Historical Report Discrepancies**
+<a id="cms-historical-report-discrepancies"></a>
 
-```
-When CMS historical reports show incorrect or missing data:
+**Workflow 24: CMS reporting and SPI call-flow diagnosis**
 
-Step 1 — Define the Discrepancy
-  - Identify specific report, data points, and time frame
-  - Compare CMS report with CM real-time data or other sources
+Use this section for CMS/CM report discrepancies, especially trunk-state changes during transfer, conference, outflow, or call reentry.
+Vendor-document rules below describe CMS capability and administration; they do not establish the cause or outcome of an individual incident. Detailed protocol rules are maintained separately in [SPI - CM/CMS Measurement Reporting Protocol](spi-protocol.md).
 
-Step 2 — Verify CMS-CM Link
-  CM: status cdr-link → should be "connected"
-  If not: check network connectivity and CDR link config (change cdr-link)
-  CM: display errors → look for CDR-related entries (Type: CDR)
+### Sources and applicability
 
-Step 3 — Agent Trace for Data Validation
-  CM: change agent <agent_id> → enable Agent Trace
-  CMS: observe real-time events for the traced agent
-  If real-time data correct but historical wrong → CMS data processing issue
-  If real-time data also wrong → CM-side data issue
+| Source ID | Bibliographic source | Scope and version boundary |
+|---|---|---|
+| CMS-OV21 | *Avaya Call Management System Overview and Specification*, Release 21.0.2, Issue 4, June 2025 | Current R21 product overview, compatibility and capacity guidance; not a defect-fix release note. |
+| CMS-CON21 | *Avaya Call Management System and Communication Manager Connections, Administration, and Troubleshooting*, Release 21.0, Issue 2, November 2024 | CMS/CM link administration and troubleshooting; includes older examples whose applicability must be checked. |
 
-Step 4 — Cross-Reference CM Data
-  CM: list history → compare agent state changes with CMS data
-  CM: display alarms → look for CTI link or data collection alarms
-  CMS HA: verify Admin-Sync connector between primary and secondary
+All page references are PDF page numbers. For current report/item semantics, obtain the applicable *CMS Database Items and Calculations*, Supervisor Reports, or Report Designer reference.
 
-Step 5 — Check CMS Internal Processes
-  CMS: check ECS logs (/var/log/ecs/) for CDR processing errors
-  CMS: verify data storage parameters and archiving processes
-  If data corruption suspected: run reconciliation with caution (may cause data loss)
-```
+### Real-time capability, storage intervals, and refresh
+
+- **Vendor fact:** CMS provides real-time, historical, and integrated reporting on agents, skills, vectors, VDNs, and trunks (CMS-OV21 p. 12, Reporting).
+- **Vendor fact:** Real-time databases contain current and previous intrahour interval data; storage intervals are 15, 30, or 60 minutes (CMS-OV21 pp. 9, 12).
+- Intrahour storage interval, screen refresh, SPI message delivery, and preservation of a physical trunk state are separate questions.
+- The interval definition does not establish that CMS updates a live report only every 15-60 minutes.
+- **Vendor fact:** Report refresh rates are set by report users; the overview illustrates 10-second and 30-second rates, averaging 20 seconds (CMS-OV21 p. 23, Average refresh rate).
+- **Integrated-report limit only:** PC Supervisor Integrated reports have a 10-second minimum; Supervisor Web permits 3-second Integrated-report refresh (CMS-OV21 p. 23).
+- Do not apply that Integrated-only distinction to an unidentified real-time trunk report or promise universal three-second trunk updates.
+- A broad real-time capability statement does not prove continuous physical occupancy visibility through every call flow.
+- A broad claim that CMS cannot report trunks in real time is also unsupported by these documents.
+- First identify the exact report, database table/item, filter, refresh setting, and operational requirement, including occupancy threshold and cadence.
+- CMS-OV21 pp. 25-26 recommend reviewing expensive/custom reports; query load is a hypothesis requiring timing/resource evidence, not a cause inferred from a wrong state.
+- CMS-OV21 p. 24 gives 30000 trunks per CM ACD and 100000 system-wide; these capacity numbers do not diagnose a single-call state mismatch.
+- CMS-OV21 pp. 7-11 list R21 changes such as scheduling, HA, platform/database updates, expanded int8 items, authentication and failover; they identify no SPI trunk-IDLE/rename fix.
+- The p. 10 entry "Improved database records / For CMS A" is incomplete in the supplied PDF; do not turn it into a defect-fix assertion.
+
+### Release administration and SPI link identity
+
+- **Vendor fact:** CM10.x is supported at release-family level with CMS19.2, CMS20.0, and CMS21.0 (CMS-OV21 p. 17; CMS-CON21 p. 9).
+- Family compatibility does not certify every maintenance build, feature combination, or specific reporting scenario.
+- CMS must be administered with the appropriate CM release to use that release's features (CMS-OV21 p. 12, ACD integration).
+- Check CM software/customer-options version, licensed Call Center Release, reporting adjunct release, CMS ACD software/release administration, and actual wire language separately.
+- **Vendor fact:** Call Center Release must match the desired/current Call Center feature load (CMS-CON21 pp. 35-36).
+- **Vendor fact:** `CMS (appl mis)` and `IQ (appl ccr)` determine SPI language on their respective links (CMS-CON21 p. 37, Reporting Adjunct Release).
+- CMS uses the `mis` application link; Avaya IQ uses `ccr`. Investigate the actual CMS processor channel, not a generic CDR link.
+- A blank CMS adjunct field means CMS is not connected; verify the configured value rather than copying the document's historical R18.1 example (CMS-CON21 p. 37).
+- These facts justify configuration verification; they do not prove a language mismatch exists in an incident.
+
+### Standalone SPI knowledge for CMS and CM
+
+- Read [SPI - CM/CMS Measurement Reporting Protocol](spi-protocol.md) for protocol scope and language negotiation, translation pumpup, measured facilities, ITN/UCID mapping, SETUP/XFER/IDLE, audit/error messages, and complete paired-call analysis.
+- This is a shared CM/CMS protocol topic, separate from SIP signaling, CDR, and AES/JTAPI call control. CMS uses the `mis` measurement link.
+- The received-side primary evidence is the full CMS `spi.log`; the operator-confirmed CM-side capture convention is the MIS section of MST. Verify build-specific coverage and use the same bounded call window on both ends.
+- Start with supplied captures and preserve rotations, timestamps/time zones, mappings and sequence continuity. Use [CMS Log Collection](log-collection.md#cms-log-collection) for scoped collection and release-dependent recipes.
+- A protocol example or an old ITN going IDLE does not prove a physical trunk release, product defect, or production outcome. Apply the standalone SPI proof boundaries before classifying the incident.
+
+### CMS database, report, and CPE interpretation
+
+1. Use the standalone SPI procedure to establish what CM sent, what CMS received, and the applicable expected message/facility sequence.
+2. Identify the exact CMS event, database table/item and field transition; verify whether the continuing call and relevant measured trunk remain represented correctly.
+3. Compare that database state with the selected report, filter and refresh at the same timestamps. A display delay and a wrong stored state require different evidence.
+4. Ask CPE to connect the report-specific behavior to the observed SPI call flow. A broad capability statement or general reporting limitation does not settle a protocol-dependent discrepancy.
+5. For hold-related questions, distinguish the current facility state from any completed-call/hold-time statistic and obtain the exact item definition; do not assume the meanings are interchangeable.
+6. Preserve matched failing/control samples and explain expected transitions before identifying an unexpected divergence. If evidence is incomplete, name the precise missing segment rather than assigning cause from screenshots alone.
+7. Validate any proposed monitoring alternative against the actual occupancy/overload threshold and update cadence; an upgrade, restart, subtask closure, or proposed alternative is not proof of recovery.
+
+### CMS platform and collection boundaries
+
+- The encrypted measurement-link and endpoint-trace implications are documented in [SPI collection boundaries](spi-protocol.md#spi-platform-boundaries).
+- CMS-CON21 pp. 55-60 describe link/network checks and include older-platform examples such as `snoop`, `spray`, `/usr/sbin/ndd /dev/tcp`, and `/etc/defaultrouter` (p. 60).
+- CMS-OV21 p. 9 identifies RHEL as the CMS platform. Validate the installed OS/build and supported procedure instead of copying older Solaris-style commands.
+- Logging enablement, administration changes, collection toggles and restarts are separate operational actions. Use a scoped capture, the applicable authorization and confirmed stop procedure.
 
 ---
 
@@ -649,6 +688,10 @@ OceanaCore/               # Core platform services
 
 ## CMS Log Collection
 
+For a CMS/CM reporting discrepancy, follow [Workflow 24](contact-center.md#cms-r21-reporting-and-spi-diagnostics). Capture the same bounded reproduction window in CM MST MIS measurements and CMS `/cms/pbx/acdN/spi.log`, with `spi.err` and `xln.log` as applicable. Record the exact report/field, ACD/trunk identifiers, call/ITN changes, screenshot timestamps and time zones; preserve rotated files and verify coverage before drawing conclusions. CMS collection uses the `mis`/SPI measurement path; a CDR-link test does not validate it.
+
+The path and enable recipes below are existing release-dependent guidance, not newly validated by the R21 PDFs. Confirm the installed-release/support-approved enable and stop syntax; use a short scoped capture and confirm logging has stopped.
+
 ### Key CMS Log Paths
 
 | Category | Path | Description |
@@ -689,6 +732,8 @@ SPI log is NOT enabled by default (performance impact). Must manually start/stop
 ```
 
 ### Enabling CMS Link Trace
+
+The link-trace command below is an existing enable example, not a complete start/stop procedure validated by the supplied PDFs. Obtain the installed-release/support-approved stop command before enabling it; do not assume `spilog -all` stops a separately enabled link trace.
 
 ```bash
 /cms/bin/lnktrace <acd_number> spi on

@@ -318,15 +318,7 @@ Step 6 — Verify Cross-Product Connections After Recovery
 
 ## CMS Historical Report
 
-**Workflow 24: CMS Historical Report Discrepancies**
-
-```
-Step 1 — Define: specific report, data points, time frame
-Step 2 — Verify CMS-CM Link: status cdr-link → should be "connected"
-Step 3 — Agent Trace: CM enable Agent Trace, CMS observe real-time
-Step 4 — Cross-Reference CM: list history, display alarms
-Step 5 — Check CMS Internal: ECS logs, data storage, archiving
-```
+For report discrepancies, follow [Workflow 24: CMS R21 Reporting and SPI Diagnostics](contact-center.md#cms-r21-reporting-and-spi-diagnostics). CMS collection uses the `mis`/SPI measurement path; a CDR-link check does not validate it. Preserve the full CMS `spi.log` sequence and corresponding CM MST MIS records for the same calls, with coverage, ITN mapping and timestamps verified. Keep report diagnosis separate from CMS login or service-outage troubleshooting.
 
 ---
 

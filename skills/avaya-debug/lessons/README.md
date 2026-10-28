@@ -9,6 +9,7 @@ This directory accumulates evidence-anchored findings from real SR cases. Each f
 | `diagnostic-principles.md` | `../references/diagnostic-principles.md` |
 | `aes-cti-jtapi.md` | `../references/aes-cti-jtapi.md` |
 | `contact-center.md` | `../references/contact-center.md` |
+| `spi-protocol.md` | `../references/spi-protocol.md` |
 | `recording-wfo.md` | `../references/recording-wfo.md` |
 | `analytics-kubernetes.md` | `../references/analytics-kubernetes.md` |
 | `security-vulnerability.md` | `../references/security-vulnerability.md` |

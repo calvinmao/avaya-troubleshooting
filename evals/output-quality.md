@@ -156,6 +156,38 @@ Vector skill: S12 (inbound queue)
 
 ---
 
+### OQ-007 — SPI Rename, IDLE and Physical Trunk Occupancy
+
+**Scenario**: A reporting discrepancy occurs after a call traverses a SIP IVR. CM shows the incoming physical circuit occupied, while CMS shows an old ITN idle.
+
+**Input evidence**: Synthetic diagnostic fixture, not a field trace:
+- CM 10.x / CMS 21.x; actual XSTAT language has not yet been verified.
+- Received SPI records include SETUP24, XFER type 3 (rename), then IDLE for the old ITN.
+- Mapping and sent-side CM MST MIS coverage are incomplete.
+- The call ends at an H.323 station after traversing SIP.
+
+**Expected output must include**:
+- Load `spi-protocol.md`; add CMS reporting guidance only where applicable.
+- Verify actual release/language before authoritative field decoding.
+- Distinguish an ITN/software facility from a physical trunk circuit.
+- Track xfer/dest, UCIDs and translations before calling the old ITN's IDLE premature.
+- Apply the SETUP `m=1` ICR/Replaces sequence only when signaling and flags establish that condition.
+- Distinguish an H.323 final station from an H.323-only IVR control.
+- Request complete paired CMS spi.log and CM MST MIS coverage for matched failing/control calls; identify MIS placement as operator-confirmed collection knowledge rather than a fact established by the cited PDFs.
+- Keep the mechanism unknown until the first divergent layer is established.
+- Apply JTAPI UCID extraction and deviceIDType checks only when AES/JTAPI interfaces are present; this fixture contains SPI evidence only.
+
+**Failure patterns to flag**:
+- Treating every SIP-IVR call as ICR/Replaces.
+- Declaring IDLE a physical disconnect or proven CM defect.
+- Prescribing XFER type 2 merely because the incoming circuit remains occupied.
+- Assuming missing CM messages from incomplete sent-side capture.
+- Treating CPERROR alone as proof of a CM code defect.
+- Using CDR-link status to validate CMS SPI.
+- Applying historical protocol-forcing commands as a production repair.
+
+---
+
 ## Regression Eval — Add After Every Production Incident
 
 When a production fault produces a new finding, add a test case here:

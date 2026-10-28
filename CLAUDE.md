@@ -84,6 +84,7 @@ skills/avaya-debug/
     diagnostic-principles.md  # Always-loaded: core invariants, cross-product, vendor escalation
     aes-cti-jtapi.md           # AES, JTAPI, TSAPI, CSTA, DMCC
     contact-center.md          # AACC, Oceana, POM, CMS, VDN, vector
+    spi-protocol.md            # CM/CMS measurement reporting protocol, ITN, SPI messages
     recording-wfo.md           # ACRA, WFO/WFE, Verint, WebLogic
     analytics-kubernetes.md    # Oceanalytics, K8s, bosh, Kafka
     security-vulnerability.md  # AVAPT/NVAPT, CVE, cipher hardening
@@ -138,6 +139,7 @@ Each reference file is self-contained for its domain. The metadata block at the 
 | `diagnostic-principles.md` | **Always loaded** — core invariants, cross-product integration, vendor escalation, case doc extraction |
 | `aes-cti-jtapi.md` | AES, JTAPI, TSAPI, CSTA, DMCC, park/unpark |
 | `contact-center.md` | AACC, Oceana, POM, CMS, VDN, vector, agent state, agent login |
+| `spi-protocol.md` | Avaya Switch / Reporting Adjunct SPI, CM/CMS/IQ measurement messages, ITN/UCID mapping, release/language, audits |
 | `recording-wfo.md` | ACRA, WFO/WFE, Verint, WebLogic, RIS, pause/resume, recording loss |
 | `analytics-kubernetes.md` | Oceanalytics, K8s, Kafka, bosh, MicroStrategy |
 | `security-vulnerability.md` | AVAPT/NVAPT, CVE, Nessus, cipher hardening |

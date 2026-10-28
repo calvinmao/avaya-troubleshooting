@@ -12,6 +12,7 @@ staleness_risks:
   - "AES version-specific behavior"
 related_docs:
   - "SKILL.md (routing)"
+  - "spi-protocol.md"
   - "lessons/diagnostic-principles.md (field findings)"
 ---
 
@@ -22,6 +23,10 @@ core invariants, cross-product integration facts, vendor escalation routes, and
 case document extraction patterns that apply regardless of which domain reference
 is also loaded.
 
+Apply interface-specific invariants to the interfaces present in the investigation. For SPI-only measurement reporting, follow CM MST MIS → CMS `spi.log` → CMS database/report and consult [SPI protocol diagnosis](spi-protocol.md). Use the wire UCID fields and mapped ITNs from the verified SPI language; JTAPI getters do not decode these records.
+
+AES flags, deviceIDType, CSTA/g3trace, JTAPI extraction and `getlogs`/`common` checks remain applicable when the CM/AES/CTI platform fault requires them. They are not default prerequisites for SPI-only diagnosis and do not replace the paired CM MIS/CMS SPI sequence.
+
 ---
 
 ## Core Diagnostic Invariants
@@ -30,9 +35,9 @@ These are empirically validated facts. Do not override them without new primary-
 
 1. **Evidence-Based**: Every conclusion must cite trace evidence — timestamps, log entries, field values. Symptom descriptions are hypotheses, not findings.
 
-2. **Layer-by-Layer**: Analyze CM → AES → JTAPI → Application independently before correlating. Root cause is often at a different layer than the symptom.
+2. **Layer-by-Layer**: Analyze the relevant interface layers independently before correlating. For CTI, follow CM → AES → JTAPI → Application; for SPI-only reporting, follow CM MST MIS → CMS `spi.log` → CMS database/report. Root cause is often at a different layer than the symptom.
 
-3. **UCID as Anchor**: UCID is the most reliable call-correlation key. Always extract via: cast event to `LucentV5CallInfo` → call `getUCID()`. **Never** use `event.getOriginalCallInfo().getUCID()` — empirically returns `"00000000000000000000"` on `EC_PARK` events.
+3. **UCID as Anchor**: UCID is the most reliable call-correlation key. For JTAPI events, always extract via: cast event to `LucentV5CallInfo` → call `getUCID()`. **Never** use `event.getOriginalCallInfo().getUCID()` — empirically returns `"00000000000000000000"` on `EC_PARK` events. For SPI records, use the wire UCID fields defined by the actual message language.
 
 4. **Check CM System-Features First**: When null addresses or trunk placeholders (`T####`) appear, run `display system-features` and check `SA9114` / `SA9124` before any deep JTAPI analysis.
 
@@ -42,7 +47,7 @@ These are empirically validated facts. Do not override them without new primary-
    - `50` = `EXPLICIT_PRIVATE_UNKNOWN`
    - `55` = `EXPLICIT_PRIVATE_LOCAL_NUMBER` (internal extension)
 
-6. **Verify Transfer Type from CSTA Trace**: Never trust the customer's description. Check for `CSTATransferCall` (consultative) vs `SingleStepTransferCall` (blind) in the raw trace.
+6. **Verify Transfer Type from CSTA Trace**: When the CSTA interface is involved, never trust the customer's description. Check for `CSTATransferCall` (consultative) vs `SingleStepTransferCall` (blind) in the raw trace. SPI transfer diagnosis instead uses its applicable XFER fields and facility mapping.
 
 7. **Vector wait-time = 0 Creates Race Conditions**: Minimum safe value is 1 second. Vector step wait fields accept integers only.
 
@@ -85,11 +90,11 @@ These are empirically validated facts. Do not override them without new primary-
 |--------------|-------|--------------------|
 | Verint code (WebLogic, RIS, BatchExtender) | **Verint** ticket | Verint logs, KB reproduction level |
 | Nuance MRCP/TTS/ASR | **Nuance** ticket | MPP MRCP trace |
-| CM / AES core bugs | **BBE** PEA | getlogs + common trace |
+| CM / AES core platform bugs | **BBE** PEA | getlogs + common trace for the affected platform |
 | POM / AEP product code | **CPE** PEA | EPM / MPP / POM logs |
 | Customer infra (LDAP, SQL, AD, firewall) | **Customer / MSP** | Network evidence from both sides |
 
-**Do not escalate to BBE without first collecting** `getlogs` output from the affected server and a `common` trace (or CSTA/g3trace for AES issues).
+For CM/AES core platform faults requiring those diagnostics, collect `getlogs` output from the affected server and a `common` trace (or CSTA/g3trace for AES issues) before BBE escalation. For SPI-only measurement/reporting issues, hand off the complete paired CM MST MIS and CMS `spi.log` evidence, translation/language context and exact database/report discrepancy; platform traces can supplement this when relevant but do not replace the SPI pair.
 
 ---
 
@@ -113,10 +118,10 @@ When working with attachments in Avaya SR cases:
 Before closing a root cause finding, confirm:
 
 - [ ] Root cause cites a specific log line, trace timestamp, config field, or code path
-- [ ] All relevant layers (CM → AES → Application) have been examined
-- [ ] `SA9114` / `SA9124` checked when null address or trunk placeholder appears
-- [ ] UCID extracted via `LucentV5CallInfo.getUCID()` — not `getOriginalCallInfo().getUCID()`
-- [ ] deviceIDType confirmed (30 vs 31 vs 50 vs 55)
-- [ ] Transfer type confirmed from CSTA trace (`CSTATransferCall` vs `SingleStepTransferCall`)
+- [ ] All relevant interface layers have been examined: CTI CM → AES → JTAPI → Application, or SPI CM MIS → CMS SPI → database/report, as applicable
+- [ ] For AES/JTAPI null addresses or trunk placeholders, `SA9114` / `SA9124` checked
+- [ ] For JTAPI events, UCID extracted via `LucentV5CallInfo.getUCID()` — not `getOriginalCallInfo().getUCID()`; for SPI, wire UCID fields used from the verified message language
+- [ ] When AES/CSTA identifiers are involved, deviceIDType confirmed (30 vs 31 vs 50 vs 55)
+- [ ] Transfer type confirmed from the applicable interface: CSTA trace (`CSTATransferCall` vs `SingleStepTransferCall`) or SPI XFER fields and mapped facilities
 - [ ] Applicable `L-NNN` lessons consulted in `lessons/<domain>.md`
 - [ ] Open items with missing evidence are explicitly listed, not silently assumed resolved
